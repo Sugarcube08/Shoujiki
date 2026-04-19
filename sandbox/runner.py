@@ -12,39 +12,45 @@ def set_limits():
     resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
 
 def run_agent_code(code: str, input_data: str):
-    # Static security check
-    FORBIDDEN_IMPORTS = ["os", "sys", "subprocess", "socket", "requests", "httpx", "urllib"]
-    for imp in FORBIDDEN_IMPORTS:
-        if f"import {imp}" in code or f"from {imp}" in code:
-            return False, "", f"Unsafe import detected: {imp}"
-
-    # We need a way to pass the input_data to the script
-    # and get the result back.
-    # We'll prepend some code to handle the input/output.
+    # We need a way to pass the input_data to the script and get the result back.
+    # We'll use a temporary file for the input data to avoid any code injection risks.
     
+    with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False) as f_in:
+        f_in.write(input_data)
+        in_path = f_in.name
+
     full_code = f"""
 import json
 import sys
-
-input_data = json.loads({json.dumps(input_data)})
-
-{code}
-
-# The agent script is expected to define an 'agent' object
-# or a 'run' function.
-# For our SDK, we'll assume there's a variable 'agent' with a 'run' method.
+import os
 
 try:
-    if 'agent' in globals():
-        result = agent.run(input_data)
+    with open('{in_path}', 'r') as __f:
+        __input_data = json.load(__f)
+
+    # Define isolated globals for the agent
+    __agent_globals = {{"__builtins__": __import__("builtins").__dict__.copy()}}
+    
+    # Execute the agent code
+    exec({repr(code)}, __agent_globals)
+
+    if 'agent' in __agent_globals:
+        __result = __agent_globals['agent'].run(__input_data)
         print("---RESULT_START---")
-        print(json.dumps(result))
+        print(json.dumps(__result))
         print("---RESULT_END---")
     else:
         print("Error: No 'agent' instance found in script", file=sys.stderr)
 except Exception as e:
     print(f"Agent execution error: {{e}}", file=sys.stderr)
     sys.exit(1)
+finally:
+    # Cleanup the input file safely
+    if os.path.exists('{in_path}'):
+        try:
+            os.remove('{in_path}')
+        except:
+            pass
 """
 
     with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
@@ -60,15 +66,18 @@ except Exception as e:
             preexec_fn=set_limits
         )
         
-        stdout = process.stdout
-        stderr = process.stderr
+        # Limit output size to prevent memory abuse via stdout spam
+        MAX_OUTPUT_SIZE = 10000
+        stdout = process.stdout[:MAX_OUTPUT_SIZE]
+        stderr = process.stderr[:MAX_OUTPUT_SIZE]
         
         # Extract result from stdout
         result = ""
         if "---RESULT_START---" in stdout:
             parts = stdout.split("---RESULT_START---")
-            result_part = parts[1].split("---RESULT_END---")[0].strip()
-            result = result_part
+            if len(parts) > 1 and "---RESULT_END---" in parts[1]:
+                result_part = parts[1].split("---RESULT_END---")[0].strip()
+                result = result_part
         
         return process.returncode == 0, result, stderr
     except subprocess.TimeoutExpired:

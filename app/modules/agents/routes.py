@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from typing import List
 from app.db.session import get_db
 from app.schemas.agent import AgentCreate, AgentResponse
@@ -19,6 +20,11 @@ async def run_agent(
     db: AsyncSession = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
+    # 0. Check for replay attack
+    existing_payment = await db.execute(select(Payment).where(Payment.tx_signature == req.tx_signature))
+    if existing_payment.scalars().first():
+        raise HTTPException(status_code=400, detail="Transaction signature already used (replay attack)")
+
     # 1. Get agent
     agent = await agent_service.get_agent(db, req.agent_id)
     if not agent:

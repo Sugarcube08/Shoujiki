@@ -4,6 +4,7 @@ from solders.signature import Signature
 from solders.pubkey import Pubkey
 from app.core.config import SOLANA_RPC_URL, PLATFORM_WALLET
 import time
+import struct
 
 async def verify_solana_payment(tx_signature_str: str, expected_amount_sol: float, sender_wallet: str):
     async with AsyncClient(SOLANA_RPC_URL) as client:
@@ -17,33 +18,31 @@ async def verify_solana_payment(tx_signature_str: str, expected_amount_sol: floa
                     if tx.transaction.meta.err:
                         return False, "Transaction failed on chain"
                     
-                    # Verify amount and recipient
-                    # In a System Program transfer, the instructions are in tx.transaction.transaction.message.instructions
                     message = tx.transaction.transaction.message
-                    meta = tx.transaction.meta
-                    
-                    # Check if the platform wallet is the recipient and received the expected amount
-                    # A simpler way for MVP: Check post-balances vs pre-balances for the platform wallet
                     account_keys = message.account_keys
-                    platform_pubkey = Pubkey.from_string(PLATFORM_WALLET)
                     
-                    try:
-                        platform_index = account_keys.index(platform_pubkey)
-                        pre_balance = meta.pre_balances[platform_index]
-                        post_balance = meta.post_balances[platform_index]
-                        transferred = (post_balance - pre_balance) / 10**9 # Convert lamports to SOL
-                        
-                        if transferred < expected_amount_sol * 0.99: # Allow for slight rounding/fees if any (though sender pays fees)
-                            return False, f"Insufficient amount: transferred {transferred}, expected {expected_amount_sol}"
-                        
-                        # Verify sender
-                        sender_pubkey = Pubkey.from_string(sender_wallet)
-                        if account_keys[0] != sender_pubkey:
-                             return False, f"Sender mismatch: expected {sender_wallet}, got {account_keys[0]}"
+                    # Also verify via System Program Transfer instruction parsing
+                    system_program_id = "11111111111111111111111111111111"
+                    valid_transfer_found = False
+                    
+                    for inst in message.instructions:
+                        program_id = str(account_keys[inst.program_id_index])
+                        if program_id == system_program_id:
+                            data = inst.data
+                            # Transfer instruction is 12 bytes: u32 (2) + u64 (lamports)
+                            if len(data) == 12 and struct.unpack('<I', data[:4])[0] == 2:
+                                lamports = struct.unpack('<Q', data[4:12])[0]
+                                from_acc = str(account_keys[inst.accounts[0]])
+                                to_acc = str(account_keys[inst.accounts[1]])
+                                
+                                if to_acc == PLATFORM_WALLET and from_acc == sender_wallet and lamports >= expected_amount_sol * 10**9 * 0.99:
+                                    valid_transfer_found = True
+                                    break
+                    
+                    if not valid_transfer_found:
+                        return False, "Valid SystemProgram transfer instruction not found in transaction"
 
-                        return True, "Payment verified"
-                    except ValueError:
-                        return False, "Platform wallet not found in transaction"
+                    return True, "Payment verified"
                 
                 import asyncio
                 await asyncio.sleep(2)

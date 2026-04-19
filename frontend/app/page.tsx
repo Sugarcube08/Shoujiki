@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { getAgents, loginWallet, runAgent } from "@/lib/api";
 import bs58 from "bs58";
@@ -29,7 +29,7 @@ export default function Home() {
       const encodedMessage = new TextEncoder().encode(message);
       const signature = await signMessage(encodedMessage);
       const signatureBase58 = require("base58-js").base58_to_binary ? "" : require("bs58").encode(signature);
-      
+
       // Handle bs58 import correctly or use a fallback
       // For Next.js/Browser, bs58 is common. 
       // Simplified for this task:
@@ -138,7 +138,7 @@ export default function Home() {
           <div className="bg-zinc-900 border border-zinc-800 w-full max-w-xl rounded-2xl p-8">
             <h2 className="text-2xl font-bold mb-4">Run {executingAgent.name}</h2>
             <p className="text-zinc-400 mb-6">Enter JSON input for the agent:</p>
-            
+
             <textarea
               value={inputData}
               onChange={(e) => setInputData(e.target.value)}
