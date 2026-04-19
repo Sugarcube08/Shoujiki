@@ -1,6 +1,10 @@
 *.txt
 venv
-__pycache__/
 .env
-**/__pycache__/
 docs/
+
+**/node_modules/
+node_modules/
+**/__pycache__/
+__pycache__/
+**/.next/

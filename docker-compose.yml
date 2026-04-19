@@ -10,7 +10,8 @@ services:
       - SANDBOX_URL=http://sandbox:8001
       - SOLANA_RPC_URL=https://api.devnet.solana.com
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - shoujiki-network
       - sandbox-network
@@ -45,6 +46,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shoujiki -d shoujiki"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - shoujiki-network
 

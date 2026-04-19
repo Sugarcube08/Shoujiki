@@ -10,6 +10,7 @@ from app.modules.billing import service as billing_service
 from app.modules.sandbox.client import execute_in_sandbox
 from app.db.models.models import Task, Payment
 from app.core.dependencies import get_current_user
+from app.modules.agents.validation import validate_agent_code
 import uuid
 
 router = APIRouter()

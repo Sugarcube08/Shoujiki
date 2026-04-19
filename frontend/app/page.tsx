@@ -9,6 +9,7 @@ import { SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL } from "@solana
 import { Loader2 } from "lucide-react";
 
 export default function Home() {
+  const { connection } = useConnection();
   const { publicKey, signMessage, sendTransaction, connected } = useWallet();
   const [agents, setAgents] = useState<any[]>([]);
   const [token, setToken] = useState<string | null>(null);
@@ -28,12 +29,7 @@ export default function Home() {
       const message = "Login to Shoujiki";
       const encodedMessage = new TextEncoder().encode(message);
       const signature = await signMessage(encodedMessage);
-      const signatureBase58 = require("base58-js").base58_to_binary ? "" : require("bs58").encode(signature);
-
-      // Handle bs58 import correctly or use a fallback
-      // For Next.js/Browser, bs58 is common. 
-      // Simplified for this task:
-      const signatureStr = Buffer.from(signature).toString('hex'); // Backend needs to match this or use base58
+      const signatureStr = bs58.encode(signature);
 
       const res = await loginWallet(publicKey.toBase58(), signatureStr, message);
       setToken(res.access_token);
@@ -148,7 +144,7 @@ export default function Home() {
           <div className="bg-zinc-900 border border-zinc-800 w-full max-w-xl rounded-2xl p-8">
             <h2 className="text-2xl font-bold mb-4">Run {executingAgent.name}</h2>
             <p className="text-zinc-400 mb-6">Enter JSON input for the agent:</p>
-
+            
             <textarea
               value={inputData}
               onChange={(e) => setInputData(e.target.value)}
