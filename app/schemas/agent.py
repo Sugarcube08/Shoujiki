@@ -20,6 +20,12 @@ class AgentCreate(AgentBase):
     entrypoint: str
     version: str = "v1"
 
+class AgentTestRequest(BaseModel):
+    files: Dict[str, str]
+    requirements: List[str]
+    entrypoint: str
+    input_data: Optional[dict] = {"test": True}
+
 class AgentResponse(AgentBase):
     id: str
     versions: List[AgentVersion]

@@ -47,7 +47,5 @@ def validate_agent_code(code: str):
 
     if not has_run_method:
         return False, "Code must define a class with a 'run(self, input_data)' method"
-    if not has_agent_instance:
-        return False, "Code must instantiate the agent as 'agent = ...'"
 
     return True, "Success"

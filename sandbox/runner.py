@@ -28,11 +28,15 @@ def run_agent_code(files: dict, requirements: list, entrypoint: str, input_data:
         # Install to a local deps folder to stay isolated
         deps_path = os.path.join(tmpdir, ".deps")
         if requirements:
-            subprocess.run(
+            pip_res = subprocess.run(
                 ["pip", "install", "-r", "requirements.txt", "-t", ".deps"],
                 cwd=tmpdir,
-                capture_output=True
+                capture_output=True,
+                text=True,
+                timeout=60 # Give pip some time
             )
+            if pip_res.returncode != 0:
+                return False, "", f"Dependency installation failed:\n{pip_res.stderr}"
         
         # 3. Create input file
         in_path = os.path.join(tmpdir, "input.json")

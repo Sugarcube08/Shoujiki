@@ -18,37 +18,37 @@ api.interceptors.request.use((config) => {
 });
 
 export const getAgents = async () => {
-  const response = await api.get('/agents');
+  const response = await api.get('/agents/');
   return response.data;
 };
 
 export const getMyAgents = async () => {
-  const response = await api.get('/agents/me');
+  const response = await api.get('/agents/me/');
   return response.data;
 };
 
 export const getMyTasks = async () => {
-  const response = await api.get('/agents/tasks');
+  const response = await api.get('/agents/tasks/');
   return response.data;
 };
 
 export const getAgent = async (id: string) => {
-  const response = await api.get(`/agents/${id}`);
+  const response = await api.get(`/agents/${id}/`);
   return response.data;
 };
 
 export const deployAgent = async (agentData: any) => {
-  const response = await api.post('/agents/deploy', agentData);
+  const response = await api.post('/agents/deploy/', agentData);
   return response.data;
 };
 
 export const testAgent = async (agentData: any) => {
-  const response = await api.post('/agents/test', agentData);
+  const response = await api.post('/agents/test/', agentData);
   return response.data;
 };
 
 export const loginWallet = async (publicKey: string, signature: string, message: string) => {
-  const response = await api.post('/auth/verify', {
+  const response = await api.post('/auth/verify/', {
     public_key: publicKey,
     signature,
     message,
@@ -61,7 +61,7 @@ export const loginWallet = async (publicKey: string, signature: string, message:
 };
 
 export const runAgent = async (agentId: string, inputData: any, txSignature: string) => {
-  const response = await api.post('/agents/run', {
+  const response = await api.post('/agents/run/', {
     agent_id: agentId,
     input_data: inputData,
     tx_signature: txSignature,

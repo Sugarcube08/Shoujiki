@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List
 from app.db.session import get_db
-from app.schemas.agent import AgentCreate, AgentResponse
+from app.schemas.agent import AgentCreate, AgentResponse, AgentTestRequest
 from app.schemas.task import RunRequest, TaskResponse, TaskHistoryResponse
 from app.modules.agents import service as agent_service
 from app.modules.billing import service as billing_service
@@ -15,7 +15,7 @@ import uuid
 
 router = APIRouter()
 
-@router.post("/run", response_model=TaskResponse)
+@router.post("/run/", response_model=TaskResponse)
 async def run_agent(
     req: RunRequest,
     db: AsyncSession = Depends(get_db),
@@ -82,13 +82,17 @@ async def run_agent(
         error=exec_result["error"] if not exec_result["success"] else None
     )
 
-@router.post("/test")
+@router.post("/test/")
 async def test_agent(
-    req: AgentCreate,
+    req: AgentTestRequest,
     current_user: str = Depends(get_current_user)
 ):
     # Rapid development endpoint: no payment, no DB persistence
-    valid, msg = validate_agent_code(req.files.get(req.entrypoint, ""))
+    entry_code = req.files.get(req.entrypoint, "")
+    if not entry_code:
+        raise HTTPException(status_code=400, detail=f"Entrypoint {req.entrypoint} not found")
+        
+    valid, msg = validate_agent_code(entry_code)
     if not valid:
         raise HTTPException(status_code=400, detail=msg)
     
@@ -96,10 +100,10 @@ async def test_agent(
         files=req.files,
         requirements=req.requirements,
         entrypoint=req.entrypoint,
-        input_data={"test": True}
+        input_data=req.input_data or {"test": True}
     )
 
-@router.post("/deploy", response_model=AgentResponse)
+@router.post("/deploy/", response_model=AgentResponse)
 async def deploy_agent(
     req: AgentCreate,
     db: AsyncSession = Depends(get_db),
@@ -116,7 +120,7 @@ async def deploy_agent(
     
     return await agent_service.create_agent(db, req, current_user)
 
-@router.get("/tasks", response_model=List[TaskHistoryResponse])
+@router.get("/tasks/", response_model=List[TaskHistoryResponse])
 async def list_my_tasks(
     db: AsyncSession = Depends(get_db),
     current_user: str = Depends(get_current_user)
@@ -126,7 +130,7 @@ async def list_my_tasks(
     )
     return result.scalars().all()
 
-@router.get("/me", response_model=List[AgentResponse])
+@router.get("/me/", response_model=List[AgentResponse])
 async def list_my_agents(
     db: AsyncSession = Depends(get_db),
     current_user: str = Depends(get_current_user)
@@ -137,7 +141,7 @@ async def list_my_agents(
 async def list_agents(db: AsyncSession = Depends(get_db)):
     return await agent_service.get_all_agents(db)
 
-@router.get("/{agent_id}", response_model=AgentResponse)
+@router.get("/{agent_id}/", response_model=AgentResponse)
 async def get_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
     agent = await agent_service.get_agent(db, agent_id)
     if not agent:
