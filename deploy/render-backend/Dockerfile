@@ -1,0 +1,34 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    curl \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Setup API
+WORKDIR /app/api
+COPY apps/api/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY apps/api/ ./backend/
+RUN touch ./backend/__init__.py
+
+# Setup Sandbox
+WORKDIR /app/sandbox
+COPY apps/sandbox/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY apps/sandbox/ .
+
+# Supervisor configuration
+WORKDIR /app
+RUN mkdir -p /var/log/supervisor
+COPY deploy/render-backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose ONLY the API port to Render
+EXPOSE 8000
+
+CMD ["/usr/bin/supervisord"]
