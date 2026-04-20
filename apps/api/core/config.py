@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 
 # Load .env file relative to this file's directory (works in Docker and local)
 env_path = Path(__file__).parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
 
 # Use a deterministic seed for local development
 PLATFORM_SECRET_SEED = os.getenv("PLATFORM_SECRET_SEED", "shoujiki_escrow_platform_secret_32")

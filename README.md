@@ -29,6 +29,19 @@ Shoujiki is built with a security-first, multi-service architecture:
 
 ---
 
+## 🚀 Quick Deploy to Render
+
+You can deploy the entire Shoujiki stack (Web, API, Sandbox, and Postgres) to Render using the included Blueprint:
+
+1. **Connect your GitHub repository** to Render.
+2. Render will automatically detect the `render.yaml` file and prompt you to create the "Shoujiki" Blueprint.
+3. Click **Apply** to provision:
+   - A **Web Service** running the mono-container (Next.js + FastAPI).
+   - A **Managed PostgreSQL** database.
+4. **Environment Variables**: Render will automatically generate a `SECRET_KEY` and `PLATFORM_SECRET_SEED`. You should only need to update `SOLANA_RPC_URL` if you are using a custom RPC.
+
+---
+
 ## 🛠️ Setup & Run
 
 ### 1. Prerequisites
