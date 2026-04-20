@@ -23,16 +23,20 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Setup API
-COPY apps/api/requirements.txt ./api/requirements.txt
-RUN pip install --no-cache-dir -r ./api/requirements.txt
-COPY apps/api/ ./api/
+WORKDIR /app/api
+COPY apps/api/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY apps/api/ ./backend/
+RUN touch ./backend/__init__.py
 
 # Setup Sandbox
-COPY apps/sandbox/requirements.txt ./sandbox/requirements.txt
-RUN pip install --no-cache-dir -r ./sandbox/requirements.txt
-COPY apps/sandbox/ ./sandbox/
+WORKDIR /app/sandbox
+COPY apps/sandbox/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY apps/sandbox/ .
 
 # Setup Web (Standalone)
+WORKDIR /app
 COPY --from=frontend-builder /app/.next/standalone ./web/
 COPY --from=frontend-builder /app/.next/static ./web/.next/static
 COPY --from=frontend-builder /app/public ./web/public
