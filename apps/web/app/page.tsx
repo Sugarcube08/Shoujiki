@@ -52,7 +52,7 @@ export default function LandingPage() {
           <Button 
             size="lg" 
             className="w-full sm:w-auto px-8 h-14 text-lg gap-2 shadow-[0_0_30px_rgba(37,99,235,0.3)]"
-            onClick={() => router.push('/dashboard/marketplace')}
+            onClick={() => router.push('/agents')}
           >
             Enter Marketplace
             <ArrowRight size={20} />

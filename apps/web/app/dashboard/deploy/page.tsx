@@ -102,6 +102,11 @@ agent = Agent()`,
   const handleDeploy = async () => {
     if (!isAuthenticated) return;
     
+    if (!metadata.id.trim() || !metadata.name.trim()) {
+      setError('Agent ID and Display Name are required');
+      return;
+    }
+
     setError('');
     setLoading(true);
     try {

@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Shoujiki API", lifespan=lifespan)
 
-# app.add_middleware(X402PaymentMiddleware)
+app.add_middleware(X402PaymentMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

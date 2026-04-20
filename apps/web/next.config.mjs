@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Force reload: 1776720037837
 const nextConfig = {
     reactStrictMode: true,
     output: 'standalone',

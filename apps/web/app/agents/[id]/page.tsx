@@ -115,7 +115,7 @@ export default function AgentRunPage() {
   if (!agent) return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4">
       <p className="text-zinc-400">Agent not found.</p>
-      <Button onClick={() => router.push('/dashboard/marketplace')}>Back to Marketplace</Button>
+      <Button onClick={() => router.push('/agents')}>Back to Marketplace</Button>
     </div>
   );
 

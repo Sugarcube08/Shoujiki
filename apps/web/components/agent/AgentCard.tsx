@@ -67,7 +67,7 @@ export const AgentCard = ({ agent, onDelete, isDeleting }: AgentCardProps) => {
         <Button 
           className="flex-1 gap-2" 
           variant="secondary"
-          onClick={() => router.push(`/agent/${agent.id}`)}
+          onClick={() => router.push(`/agents/${agent.id}`)}
         >
           <Play size={16} fill="currentColor" />
           Configure & Run

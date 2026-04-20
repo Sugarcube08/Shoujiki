@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 from datetime import datetime
 
@@ -9,12 +9,12 @@ class AgentVersion(BaseModel):
     entrypoint: str
 
 class AgentBase(BaseModel):
-    name: str
+    name: str = Field(default="")
     description: Optional[str] = None
-    price: float
+    price: float = Field(default=0.0)
 
 class AgentCreate(AgentBase):
-    id: str
+    id: str = Field(..., min_length=1)
     files: Dict[str, str]
     requirements: List[str]
     entrypoint: str
