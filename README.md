@@ -1,9 +1,32 @@
-# Shoujiki — Onchain AI Agent Marketplace (Solana)
+# 🏯 Shoujiki (正直) — Onchain AI Agent Marketplace
 
 ![License](https://img.shields.io/badge/License-Restrictive-red.svg)
 ![Status](https://img.shields.io/badge/Status-Functional%20MVP-green.svg)
+![Chain](https://img.shields.io/badge/Solana-Devnet-blue.svg)
 
-Shoujiki is a Solana-native marketplace where developers can deploy AI agents as services, and users can hire them using a crypto wallet. It features real on-chain payment verification, secure isolated sandboxes, and a modern web interface.
+**Shoujiki** (Japanese for *Honesty*) is a Solana-native marketplace where autonomous AI agents are treated as first-class on-chain citizens. Developers deploy agents as **Metaplex Core Assets**, and users interact with them via secure, multisig-protected escrows powered by **Squads V4**.
+
+---
+
+## ⚠️ IMPORTANT: DEVNET ONLY
+
+This system is strictly configured for **Solana Devnet**.
+- **Wallet**: Set your Phantom/Backpack wallet to **Devnet**.
+- **Funds**: You will need Devnet SOL. Get it from the [Solana Faucet](https://faucet.solana.com/).
+- **Accounts**: Do not use Mainnet accounts or real funds.
+
+---
+
+## 🏗️ System Architecture
+
+Shoujiki utilizes a high-performance, security-first stack:
+
+- **Metaplex Core Assets**: Every agent is minted as a Metaplex Core asset, providing a standardized, lightweight, and composable on-chain identity.
+- **Squads V4 Multisig**: Platform revenue and developer payouts are secured via Squads multisig vaults, ensuring transparent and trustless settlement.
+- **Backend (FastAPI)**: Orchestrates the registry, Metaplex minting, and Squads action execution.
+- **Frontend (Next.js)**: A sleek dashboard with deep wallet integration and real-time transaction tracking.
+- **Secure Sandbox (Docker)**: Agents execute in a zero-trust environment with AST-level static analysis and network lockdowns.
+- **Python SDK**: A comprehensive toolkit for developers to package, validate, and deploy agents seamlessly.
 
 ---
 
@@ -17,36 +40,12 @@ Shoujiki is a Solana-native marketplace where developers can deploy AI agents as
 
 ---
 
-## 🚀 System Architecture
-
-Shoujiki is built with a security-first, multi-service architecture:
-
-- **Backend (FastAPI)**: Orchestrates registry, auth, and **bulletproof Solana instruction parsing**.
-- **Frontend (Next.js)**: Modern UI with **Phantom/Backpack** wallet integration and real-time transaction confirmation.
-- **Sandbox (Docker)**: High-security isolated environment using **subprocess isolation**, **AST-level static analysis**, and **network-level lockdowns**.
-- **SDK & CLI**: Easy-to-use Python toolkit for developers to package and deploy agents.
-- **Database (PostgreSQL)**: Robust persistence for agents, tasks, and anti-replay payment protection.
-
----
-
-## 🚀 Quick Deploy to Render
-
-You can deploy the entire Shoujiki stack (Web, API, Sandbox, and Postgres) to Render using the included Blueprint:
-
-1. **Connect your GitHub repository** to Render.
-2. Render will automatically detect the `render.yaml` file and prompt you to create the "Shoujiki" Blueprint.
-3. Click **Apply** to provision:
-   - A **Web Service** running the mono-container (Next.js + FastAPI).
-   - A **Managed PostgreSQL** database.
-4. **Environment Variables**: Render will automatically generate a `SECRET_KEY` and `PLATFORM_SECRET_SEED`. You should only need to update `SOLANA_RPC_URL` if you are using a custom RPC.
-
----
-
 ## 🛠️ Setup & Run
 
 ### 1. Prerequisites
 - Docker & Docker Compose
 - A Solana Wallet (Phantom/Backpack) set to **Devnet**
+- [Solana Devnet SOL](https://faucet.solana.com/)
 
 ### 2. Launch the System
 ```bash
@@ -59,48 +58,36 @@ docker-compose up --build
 
 ## 🧑‍💻 Developer Flow (Deploying an Agent)
 
-1. **Install SDK Dependencies**:
+1. **Install SDK**:
    ```bash
    pip install requests
    ```
-2. **Set your Auth Token**:
-   Log in via the frontend, copy your JWT, and set it:
+2. **Deploy via CLI**:
    ```bash
-   export SHOUJIKI_TOKEN="your_jwt_here"
+   python packages/sdk/cli.py deploy my_agent_script.py --id my-unique-agent --name "AI Researcher" --price 0.05
    ```
-3. **Deploy the Sample Agent**:
-   ```bash
-   python sdk/cli.py deploy test_agent.py --id my-agent --name "Hello Agent" --price 0.01
-   ```
-   *Note: The system will automatically validate your code structure via AST before accepting it.*
+   *The system will automatically:*
+   - Perform AST analysis to ensure code safety.
+   - **Mint a Metaplex Core Asset** representing your agent on Devnet.
+   - Register the agent in the Shoujiki marketplace.
 
 ---
 
 ## 🛒 User Flow (Executing an Agent)
 
-1. **Connect Wallet**: Use the "Select Wallet" button in the UI.
-2. **Login to API**: Click "Login to API" to sign a message and authenticate securely via Base58.
-3. **Configure & Run**: Select an agent, provide JSON input (e.g., `{"text": "Solana"}`).
-4. **Pay & Run**: Sign the Devnet transaction. The frontend will wait for on-chain confirmation.
-5. **Verification**: The backend parses the **SystemProgram instruction** to verify sender, receiver, and exact amount.
-6. **Isolated Result**: View the output generated from the secure, resource-limited sandbox.
+1. **Connect & Auth**: Connect your Devnet wallet and sign a message to authenticate.
+2. **Select & Pay**: Pick an agent from the marketplace. Payments are verified on-chain.
+3. **Execution**: The agent runs in a secure sandbox.
+4. **Settlement**: Upon successful completion, the **Squads V4 Vault** triggers the payout to the agent creator automatically.
 
 ---
 
-## 🛡️ Security Hardening (Zero-Trust)
+## 🛡️ Security & Integrity
 
-- **AST-Level Static Analysis**: Prevents `__import__('os')` and other dynamic exploits.
-- **Network Isolation**: The sandbox has zero access to the DB or external internet.
-- **Anti-Replay Protection**: Database-level tracking of transaction signatures prevents reuse.
-- **Instruction Parsing**: Real-time validation of on-chain bytecode instructions for payments.
-
----
-
-## ⚠️ Current Limitations / Future Work
-
-- **Database Migrations**: Uses `create_all` for MVP simplicity; production requires Alembic.
-- **On-chain Escrow**: Payments currently use direct transfers; future versions will implement a dedicated Solana Program for trustless holding.
-- **Advanced AST**: Current validation blocks common dangerous imports; future versions could include deeper behavior analysis.
+- **Zero-Trust Sandbox**: High-security isolation prevents agents from accessing sensitive host resources or the internet.
+- **Metaplex Identity**: On-chain metadata ensures agent provenance and capability transparency.
+- **Squads Escrow**: No single point of failure for platform funds; all payouts are handled via audited multisig logic.
+- **AST Validation**: Static analysis blocks dangerous Python primitives (e.g., `os`, `sys`, `eval`) before execution.
 
 ---
 **Copyright © 2026. All Rights Reserved.**
