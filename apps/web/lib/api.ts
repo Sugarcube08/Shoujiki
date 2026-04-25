@@ -46,6 +46,16 @@ export const deployAgent = async (agentData: any) => {
   return response.data;
 };
 
+export const deleteAgent = async (id: string) => {
+  const response = await api.delete(`/agents/${id}`);
+  return response.data;
+};
+
+export const testAgent = async (agentData: any) => {
+  const response = await api.post('/agents/test', agentData);
+  return response.data;
+};
+
 export const runAgent = async (
   agentId: string, 
   inputData: any, 
@@ -72,6 +82,11 @@ export const getTaskStatus = async (taskId: string) => {
   // Find the specific task in the history for now, or add a specific endpoint if needed.
   const tasks = response.data;
   return tasks.find((t: any) => t.id === taskId);
+};
+
+export const withdrawAgentBalance = async (id: string) => {
+  const response = await api.post(`/billing/agent/${id}/withdraw`, {});
+  return response.data;
 };
 
 export default api;
