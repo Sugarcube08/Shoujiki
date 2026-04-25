@@ -235,6 +235,14 @@ export default function AgentRunPage() {
                     <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Reliability</p>
                     <p className="text-xl font-bold text-blue-400">{((agent.reliability_score || 1) * 100).toFixed(0)}%</p>
                   </div>
+                  <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                    <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Trust Level</p>
+                    <p className="text-lg font-black text-purple-400 uppercase tracking-tight">{agent.trust_level || "Verified"}</p>
+                  </div>
+                  <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                    <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Swarm Contribution</p>
+                    <p className="text-lg font-bold text-orange-400">{agent.contribution_score?.toFixed(0) || "0"}</p>
+                  </div>
                   <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl col-span-2">
                     <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Total Proven Runs</p>
                     <p className="text-lg font-bold text-zinc-300">{agent.total_runs || 0} Successful Cycles</p>

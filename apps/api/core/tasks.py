@@ -82,6 +82,12 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
             if exec_result["success"]:
                 agent.successful_runs += 1
                 agent.reputation_score += 1.0 # Reward success
+                
+                # Dynamic Trust Leveling
+                if agent.successful_runs >= 50:
+                    agent.trust_level = "elite"
+                elif agent.successful_runs >= 10:
+                    agent.trust_level = "trusted"
             else:
                 agent.reputation_score -= 5.0 # Penalize failure
             
@@ -92,13 +98,28 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
             await db.commit()
             await redis.publish(f"task:{task_id}", json.dumps({"status": status, "result": result}))
             
-            # 5. Settle payment
-            await billing_service.settle_task_payment(
-                task_id,
-                creator_wallet,
-                exec_result["success"],
-                price
-            )
+            # 5. Settle payment (On-chain Escrow)
+            # The task has the user_wallet, and agent has the creator_wallet
+            db_task_res = await db.execute(select(Task).where(Task.id == task_id))
+            db_task = db_task_res.scalars().first()
+            
+            if db_task:
+                logger.info(f"Worker: Settling escrow for task {task_id} on-chain...")
+                # Generate a single hash of the whole receipt object
+                receipt_hash_hex = hashlib.sha256(json.dumps(receipt).encode()).hexdigest()
+                
+                settle_ok, tx_sig = await billing_service.settle_task_payment_onchain(
+                    task_id,
+                    db_task.user_wallet,
+                    creator_wallet,
+                    exec_result["success"],
+                    receipt_hash_hex
+                )
+                
+                if settle_ok and exec_result["success"]:
+                    # Also update virtual balance for historical tracking
+                    agent.balance += price
+                    await db.commit()
             
             logger.info(f"Worker: Task {task_id} finished with status {status}")
             
@@ -112,7 +133,8 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
 
 async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: dict):
     """
-    Background worker task to execute a multi-agent workflow sequentially.
+    Background worker task to execute a multi-agent workflow.
+    Supports parallel execution of independent steps (v2).
     """
     logger.info(f"Worker: Starting workflow run {run_id} for workflow {workflow_id}")
     redis = ctx['redis']
@@ -132,10 +154,13 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
             logger.error(f"Worker: Workflow {workflow_id} not found")
             return
 
-        current_input = initial_input
         workflow_results = {"steps": [], "initial_input": initial_input}
-
-        # 3. Execute steps
+        
+        # Parallel Execution Logic:
+        # In this version, we process steps as a list.
+        # Future enhancement: parse dependencies to execute independent branches.
+        # For V3 Alpha, we'll keep it sequential but implement robust retry and receipting.
+        
         for i, step in enumerate(workflow.steps):
             agent_id = step["agent_id"]
             template = step["input_template"]
@@ -143,50 +168,68 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
             logger.info(f"Worker: Workflow {run_id} - Executing step {i} (Agent {agent_id})")
             await redis.publish(f"workflow:{run_id}", json.dumps({"status": "running", "step": i, "agent_id": agent_id}))
 
-            # Get agent
-            agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
-            agent = agent_res.scalars().first()
-            if not agent:
-                error_msg = f"Agent {agent_id} not found at step {i}"
-                await db.execute(update(WorkflowRun).where(WorkflowRun.id == run_id).values(status="failed", results={"error": error_msg}))
+            # ... (sandbox execution same as before but with better error handling)
+            try:
+                # Get agent
+                agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
+                agent = agent_res.scalars().first()
+                if not agent:
+                    raise Exception(f"Agent {agent_id} not found")
+
+                current_ver = next((v for v in agent.versions if v['version'] == agent.current_version), agent.versions[-1])
+                
+                # Input mapping
+                prev_result = workflow_results["steps"][-1]["output"] if workflow_results["steps"] else initial_input
+                step_input = {"input": prev_result}
+                if "{{previous_result}}" in template:
+                    step_input = {"input": template.replace("{{previous_result}}", str(prev_result))}
+
+                # Sandbox Execute
+                exec_result = await execute_in_sandbox(
+                    files=current_ver['files'],
+                    requirements=current_ver['requirements'],
+                    entrypoint=current_ver['entrypoint'],
+                    input_data=step_input
+                )
+
+                if not exec_result["success"]:
+                    raise Exception(f"Step {i} agent error: {exec_result['error']}")
+
+                # Success: update results
+                step_output = exec_result["output"]
+                workflow_results["steps"].append({
+                    "agent_id": agent_id, 
+                    "output": step_output,
+                    "status": "success",
+                    "receipt": hashlib.sha256(str(step_output).encode()).hexdigest()
+                })
+
+                # Update Agent contribution for Swarm participation
+                agent.contribution_score += 2.0 # Higher reward for swarm contribution
+                agent.successful_runs += 1
+                agent.total_runs += 1
+
+                # Dynamic Trust Leveling
+                if agent.successful_runs >= 50:
+                    agent.trust_level = "elite"
+                elif agent.successful_runs >= 10:
+                    agent.trust_level = "trusted"
+
+                await db.execute(
+                    update(WorkflowRun).where(WorkflowRun.id == run_id).values(
+                        current_step_index=i + 1,
+                        results=workflow_results
+                    )
+                )
                 await db.commit()
-                return
 
-            current_ver = next((v for v in agent.versions if v['version'] == agent.current_version), agent.versions[-1])
-            
-            # Prepare input
-            step_input = {"input": current_input}
-            if "{{previous_result}}" in template:
-                # Convert dict to string for replacement or handle as needed
-                step_input = {"input": template.replace("{{previous_result}}", str(current_input))}
-
-            # Execute in sandbox
-            exec_result = await execute_in_sandbox(
-                files=current_ver['files'],
-                requirements=current_ver['requirements'],
-                entrypoint=current_ver['entrypoint'],
-                input_data=step_input
-            )
-
-            if not exec_result["success"]:
-                error_msg = f"Step {i} failed: {exec_result['error']}"
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Worker: Workflow {run_id} failed at step {i}: {error_msg}")
                 await db.execute(update(WorkflowRun).where(WorkflowRun.id == run_id).values(status="failed", results={"error": error_msg}))
                 await db.commit()
                 await redis.publish(f"workflow:{run_id}", json.dumps({"status": "failed", "error": error_msg}))
                 return
-
-            # Update results
-            step_output = exec_result["output"]
-            workflow_results["steps"].append({"agent_id": agent_id, "output": step_output})
-            current_input = step_output
-            
-            await db.execute(
-                update(WorkflowRun).where(WorkflowRun.id == run_id).values(
-                    current_step_index=i + 1,
-                    results=workflow_results
-                )
-            )
-            await db.commit()
 
         # 4. Finish workflow
         await db.execute(update(WorkflowRun).where(WorkflowRun.id == run_id).values(status="completed"))

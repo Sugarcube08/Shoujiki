@@ -39,9 +39,33 @@ def run_agent_code(files: dict, requirements: list, entrypoint: str, input_data:
         with open(in_path, "w") as f:
             f.write(input_data)
         
-        # 4. Generate wrapper to run the agent
-        # The entrypoint is assumed to be a python file that defines a class or instantiates 'agent'
-        # We'll use a more robust way to find the agent instance.
+        # 4. Generate wrapper and internal shoujiki module
+        shoujiki_module = """
+import json
+import os
+
+class Shoujiki:
+    def hire_agent(self, agent_id, input_data):
+        # This is a bridge. It writes a request to a specific file 
+        # that the runner will detect and fulfill.
+        request = {
+            "type": "hire",
+            "agent_id": agent_id,
+            "input_data": input_data
+        }
+        with open('hire_request.json', 'w') as f:
+            f.write(json.dumps(request))
+        
+        # The runner would ideally fulfill this, but for the demo 
+        # we'll simulate the capability or provide a result file.
+        print(f"SHOUJIKI_BRIDGE: Requested hire of {agent_id}")
+        return {"status": "requested", "note": "Machine-to-machine demo active"}
+
+shoujiki = Shoujiki()
+"""
+        with open(os.path.join(tmpdir, "shoujiki.py"), "w") as f:
+            f.write(shoujiki_module)
+
         module_name = entrypoint.replace(".py", "").replace("/", ".")
         wrapper_code = f"""
 import json
@@ -90,7 +114,7 @@ except Exception as e:
             f.write(wrapper_code)
 
         try:
-            # Try isolated execution first
+            # Try isolated execution
             command = ["unshare", "-rn", "python3", "wrapper.py"]
             process = subprocess.run(
                 command,
@@ -101,17 +125,11 @@ except Exception as e:
                 preexec_fn=set_limits
             )
             
-            # If unshare itself failed (e.g. permission denied)
-            if process.returncode == 1 and "unshare failed" in process.stderr:
-                print("Warning: Network isolation (unshare) failed. Falling back to standard execution.")
-                process = subprocess.run(
-                    ["python3", "wrapper.py"],
-                    cwd=tmpdir,
-                    capture_output=True,
-                    text=True,
-                    timeout=20,
-                    preexec_fn=set_limits
-                )
+            # If unshare itself failed (e.g. permission denied or kernel config)
+            # We must FAIL CLOSED. No insecure fallback.
+            if process.returncode != 0 and ("unshare failed" in process.stderr or "Operation not permitted" in process.stderr):
+                error_msg = f"Security Error: Isolation namespace failed to initialize. Aborting execution for safety. Details: {process.stderr}"
+                return False, "", error_msg
             
             MAX_OUTPUT_SIZE = 50000
             stdout = process.stdout[:MAX_OUTPUT_SIZE]

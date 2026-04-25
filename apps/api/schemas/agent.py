@@ -34,6 +34,8 @@ class AgentResponse(AgentBase):
     mint_address: Optional[str] = None
     reputation_score: float
     reliability_score: float
+    contribution_score: float
+    trust_level: str
     total_runs: int
     successful_runs: int
     balance: float

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::system_instruction;
 use anchor_lang::solana_program::program::invoke;
 
-declare_id!("SHoujikiEscrow111111111111111111111111111");
+declare_id!("SHoujikiEscrow11111111111111111111111111111");
 
 #[program]
 pub mod shoujiki_escrow {
@@ -15,6 +15,7 @@ pub mod shoujiki_escrow {
         escrow.amount = amount;
         escrow.task_id = task_id;
         escrow.status = EscrowStatus::Locked;
+        escrow.receipt_hash = None;
 
         // Transfer SOL to escrow PDA
         let ix = system_instruction::transfer(
@@ -34,9 +35,11 @@ pub mod shoujiki_escrow {
         Ok(())
     }
 
-    pub fn release_funds(ctx: Context<SettleEscrow>, success: bool) -> Result<()> {
+    pub fn release_funds(ctx: Context<SettleEscrow>, success: bool, receipt_hash: [u8; 32]) -> Result<()> {
         let escrow = &mut ctx.accounts.escrow;
         require!(escrow.status == EscrowStatus::Locked, EscrowError::AlreadySettled);
+
+        escrow.receipt_hash = Some(receipt_hash);
 
         if success {
             // Transfer from Escrow PDA to Agent Creator
@@ -60,7 +63,7 @@ pub struct InitializeEscrow<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + 32 + 32 + 8 + 4 + task_id.len() + 1,
+        space = 8 + 32 + 32 + 8 + 4 + task_id.len() + 1 + (1 + 32),
         seeds = [b"escrow", task_id.as_bytes()],
         bump
     )]
@@ -98,6 +101,7 @@ pub struct EscrowAccount {
     pub amount: u64,
     pub task_id: String,
     pub status: EscrowStatus,
+    pub receipt_hash: Option<[u8; 32]>,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]

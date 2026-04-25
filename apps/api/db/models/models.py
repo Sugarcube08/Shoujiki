@@ -13,11 +13,14 @@ class Agent(Base):
     price = Column(Float, nullable=False)
     creator_wallet = Column(String, nullable=False, index=True)
     mint_address = Column(String, nullable=True, index=True) # Metaplex Core Asset Address
-    reputation_score = Column(Float, nullable=False, default=100.0) # Base 100
-    reliability_score = Column(Float, nullable=False, default=1.0) # 0.0 to 1.0 (success rate)
-    total_runs = Column(Float, nullable=False, default=0)
     successful_runs = Column(Float, nullable=False, default=0)
-
+    
+    # Reputation Graph / Trust Fields
+    reputation_score = Column(Float, nullable=False, default=100.0)
+    reliability_score = Column(Float, nullable=False, default=1.0)
+    contribution_score = Column(Float, nullable=False, default=0.0) # For Swarm involvement
+    trust_level = Column(String, default="verified") # verified, trusted, elite
+    
     # Treasury Fields
     balance = Column(Float, nullable=False, default=0.0)
     treasury_address = Column(String, nullable=True) # PDA or sub-wallet
