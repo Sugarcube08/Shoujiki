@@ -23,6 +23,7 @@ import {
 import { useWalletAuth } from '@/hooks/useWalletAuth';
 import Editor from "@monaco-editor/react";
 import { Alert } from '@/components/ui/Alert';
+import { cn } from '@/lib/utils';
 
 export default function DevSpacePage() {
   const router = useRouter();
