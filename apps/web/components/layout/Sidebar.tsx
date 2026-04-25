@@ -11,7 +11,6 @@ const navItems = [
   { label: 'Swarms', href: '/swarms', icon: Rocket },
   { label: 'My Agents', href: '/my-agents', icon: User2 },
   { label: 'Dev Space', href: '/dev', icon: Code2 },
-  { label: 'Deploy Agent', href: '/deploy', icon: LayoutDashboard },
 ];
 
 export const Sidebar = () => {
@@ -29,7 +28,7 @@ export const Sidebar = () => {
     <aside className="w-72 border-r border-zinc-900/80 flex flex-col h-screen sticky top-0 bg-zinc-950/80 backdrop-blur-3xl z-40">
       <div className="p-10 flex flex-col gap-1">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.4)] group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.4)] group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border-t border-white/20">
             <Zap size={22} className="text-white" fill="currentColor" />
           </div>
           <div className="flex flex-col">
@@ -44,7 +43,7 @@ export const Sidebar = () => {
       </div>
 
       <nav className="flex-1 px-6 py-4 space-y-2">
-        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-4">Main Menu</p>
+        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-4 mb-4">Command_Menu</p>
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -78,7 +77,7 @@ export const Sidebar = () => {
           </div>
           
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center border border-green-500/20">
               <Activity size={14} className="text-green-500 animate-pulse" />
             </div>
             <div>

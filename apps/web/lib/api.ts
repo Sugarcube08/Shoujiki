@@ -64,22 +64,29 @@ export const runAgent = async (
   paymentType: string, 
   signature: string, 
   userWallet: string,
-  txSignature: string
+  txSignature: string,
+  x402Sig?: string,
+  x402Pubkey?: string
 ) => {
+  const headers: Record<string, string> = {};
+  if (x402Sig && x402Pubkey) {
+    headers['X-Payment-Signature'] = x402Sig;
+    headers['X-Payment-Pubkey'] = x402Pubkey;
+  }
+
   const response = await api.post('/agents/run', {
     agent_id: agentId,
     input_data: inputData,
     task_id: taskId,
     reference,
     payment_type: paymentType,
-    signature: txSignature // Send the on-chain tx signature
-  });
+    signature: txSignature 
+  }, { headers });
   return response.data;
 };
 
 export const getTaskStatus = async (taskId: string) => {
   const response = await api.get(`/agents/tasks`);
-  // Find the specific task in the history for now, or add a specific endpoint if needed.
   const tasks = response.data;
   return tasks.find((t: any) => t.id === taskId);
 };
