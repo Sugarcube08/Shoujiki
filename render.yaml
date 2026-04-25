@@ -12,8 +12,6 @@ services:
         fromDatabase:
           name: shoujiki-db
           property: connectionString
-      - key: PORT
-        value: "8000"
       - key: PLATFORM_SECRET_SEED
         generateValue: true
       - key: SECRET_KEY
@@ -27,7 +25,7 @@ services:
       - key: REDIS_HOST
         value: 127.0.0.1
       - key: PORT
-        value: 3000
+        value: "8000"
 
 databases:
   - name: shoujiki-db

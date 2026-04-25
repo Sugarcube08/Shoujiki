@@ -28,9 +28,9 @@ COPY apps/sandbox/ .
 # Supervisor configuration
 WORKDIR /app
 RUN mkdir -p /var/log/supervisor
-COPY deploy/render-backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY deploy/render-backend/supervisor.conf /app/supervisor.conf
 
 # Expose ONLY the API port to Render
 EXPOSE 8000
 
-CMD ["/usr/bin/supervisord"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/app/supervisor.conf"]
