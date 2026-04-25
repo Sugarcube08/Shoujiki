@@ -18,7 +18,8 @@ import {
   Bot, 
   Lock,
   ArrowRight,
-  Cpu
+  Cpu,
+  Activity
 } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { cn } from '@/lib/utils';
