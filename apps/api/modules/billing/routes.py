@@ -16,3 +16,14 @@ async def get_balance(
     In production, this would query the Lobster/Crossmint API.
     """
     return {"wallet": current_user, "balance": 0.0}
+
+@router.post("/agent/{agent_id}/withdraw")
+async def withdraw_agent_earnings(
+    agent_id: str,
+    current_user: str = Depends(get_current_user)
+):
+    success, result = await billing_service.withdraw_agent_funds(agent_id, current_user)
+    if not success:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail=result)
+    return {"message": "Withdrawal successful", "tx_signature": result}

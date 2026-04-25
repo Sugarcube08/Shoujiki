@@ -13,6 +13,7 @@ function cn(...inputs: ClassValue[]) {
 
 const navItems = [
   { label: 'Marketplace', href: '/marketplace', icon: ShoppingCart },
+  { label: 'Swarms', href: '/swarms', icon: Rocket },
   { label: 'My Agents', href: '/my-agents', icon: User2 },
   { label: 'Dev Space', href: '/dev', icon: Code2 },
   { label: 'Deploy Agent', href: '/deploy', icon: LayoutDashboard },

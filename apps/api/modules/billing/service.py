@@ -218,18 +218,52 @@ async def transfer_sol(recipient_wallet: str, amount_sol: float):
 
 async def settle_task_payment(task_id: str, agent_creator_wallet: str, success: bool, amount_sol: float = 0.01):
     """
-    Settle the task payment by transferring from platform wallet to creator on success.
+    Settle the task payment by crediting the agent's balance on success.
+    The funds stay in the platform wallet until a withdrawal is requested.
     """
     if not success:
-        logger.info(f"Task {task_id} failed. No payout triggered.")
+        logger.info(f"Task {task_id} failed. No balance credited.")
         return True, "Task failed, no payout"
 
-    logger.info(f"Settling payment for task {task_id}: {amount_sol} SOL to {agent_creator_wallet}")
-    ok, tx_sig = await transfer_sol(agent_creator_wallet, amount_sol)
+    async with AsyncSessionLocal() as db:
+        # Find the agent associated with this task
+        from backend.db.models.models import Task, Agent
+        task_res = await db.execute(select(Task).where(Task.id == task_id))
+        task = task_res.scalars().first()
+        if task:
+            agent_res = await db.execute(select(Agent).where(Agent.id == task.agent_id))
+            agent = agent_res.scalars().first()
+            if agent:
+                agent.balance += amount_sol
+                await db.commit()
+                logger.info(f"Task {task_id} settled: {amount_sol} SOL credited to agent {agent.id}")
+                return True, f"Credited {amount_sol} SOL"
     
-    if ok:
-        logger.info(f"Task settlement successful: {tx_sig}")
-        return True, tx_sig
-    else:
-        logger.error(f"Task settlement failed: {tx_sig}")
-        return False, tx_sig
+    return False, "Agent not found"
+
+async def withdraw_agent_funds(agent_id: str, creator_wallet: str):
+    """
+    Withdraw agent earnings to the creator's wallet on-chain.
+    """
+    async with AsyncSessionLocal() as db:
+        from backend.db.models.models import Agent
+        result = await db.execute(select(Agent).where(Agent.id == agent_id))
+        agent = result.scalars().first()
+        
+        if not agent:
+            return False, "Agent not found"
+        if agent.creator_wallet != creator_wallet:
+            return False, "Unauthorized withdrawal"
+        if agent.balance <= 0:
+            return False, "Insufficient balance"
+        
+        amount_to_send = agent.balance
+        logger.info(f"Worker: Withdrawing {amount_to_send} SOL for agent {agent_id} to {creator_wallet}")
+        
+        ok, tx_sig = await transfer_sol(creator_wallet, amount_to_send)
+        if ok:
+            agent.balance = 0.0
+            await db.commit()
+            return True, tx_sig
+        else:
+            return False, tx_sig

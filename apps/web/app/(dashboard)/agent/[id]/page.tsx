@@ -18,7 +18,7 @@ export default function AgentRunPage() {
   const { connection } = useConnection();
   const { sendTransaction, signMessage } = useWallet();
   const { isAuthenticated, login, connected, publicKey } = useWalletAuth();
-  
+
   const [agent, setAgent] = useState<any>(null);
   const [inputData, setInputData] = useState('{"text": "Hello"}');
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ export default function AgentRunPage() {
 
   const handleRun = async () => {
     if (!publicKey || !connected || !isAuthenticated || !signMessage) return;
-    
+
     setError('');
     setResult(null);
     try {
@@ -48,7 +48,7 @@ export default function AgentRunPage() {
         setStatus('paying');
         const reference = Keypair.generate().publicKey;
         referenceBase58 = reference.toBase58();
-        
+
         const { SystemProgram, Transaction } = await import('@solana/web3.js');
         const tx = new Transaction().add(
           SystemProgram.transfer({
@@ -58,28 +58,28 @@ export default function AgentRunPage() {
           })
         );
         tx.instructions[0].keys.push({ pubkey: reference, isSigner: false, isWritable: false });
-        
+
         txSignature = await sendTransaction(tx, connection);
-        
+
         setStatus('verifying');
         await confirmTx(connection, txSignature);
       } else {
         setStatus('paying');
         const { tx, reference } = await createEscrowTransaction(
-          publicKey, 
-          new PublicKey(agent.creator_wallet), 
-          taskId, 
+          publicKey,
+          new PublicKey(agent.creator_wallet),
+          taskId,
           agent.price
         );
         referenceBase58 = reference.toBase58();
         txSignature = await sendTransaction(tx, connection);
-        
+
         setStatus('verifying');
         await confirmTx(connection, txSignature);
       }
-      
+
       setStatus('executing');
-      
+
       const payloadStr = JSON.stringify({
         agent_id: agent.id,
         input_data: JSON.parse(inputData),
@@ -87,47 +87,52 @@ export default function AgentRunPage() {
         reference: referenceBase58,
         payment_type: paymentType
       });
-      
+
       const msgBytes = new TextEncoder().encode(payloadStr);
       const signatureBytes = await signMessage(msgBytes);
       const signatureBase64 = Buffer.from(signatureBytes).toString('base64');
-      
+
       const runRes = await runAgent(
-        agent.id, 
-        JSON.parse(inputData), 
-        taskId, 
-        referenceBase58, 
+        agent.id,
+        JSON.parse(inputData),
+        taskId,
+        referenceBase58,
         paymentType,
         signatureBase64,
         publicKey.toBase58(),
         txSignature // This is the tx signature
       );
 
-      // Start polling for result
+      // Start WebSocket for real-time updates
       setStatus('executing');
-      let completed = false;
-      let attempts = 0;
-      const maxAttempts = 30; // 30 seconds poll
 
-      while (!completed && attempts < maxAttempts) {
-        const task = await import('@/lib/api').then(m => m.getTask(taskId));
-        if (task && (task.status === 'completed' || task.status === 'failed')) {
-          setResult(task.result);
+      const wsUrl = `${process.env.NEXT_PUBLIC_API_URL?.replace('http', 'ws')}/ws/tasks/${taskId}`;
+      const ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.status === 'running') {
+          setStatus('executing');
+        } else if (data.status === 'completed' || data.status === 'failed') {
+          setResult(data.result || data.error);
           setStatus('done');
-          completed = true;
-          if (task.status === 'failed') {
-            setError(task.result || 'Execution failed');
+          if (data.status === 'failed') {
+            setError(data.error || data.result || 'Execution failed');
           }
-        } else {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          attempts++;
+          ws.close();
         }
-      }
+      };
 
-      if (!completed) {
-        setError('Task is taking longer than expected. Check your dashboard later.');
+      ws.onerror = (err) => {
+        console.error('WebSocket Error:', err);
+        setError('Real-time connection failed. Falling back to dashboard status.');
         setStatus('done');
-      }
+      };
+
+      ws.onclose = () => {
+        console.info('WebSocket: Connection closed');
+      };
+
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.detail || err.message || 'Execution failed');
@@ -150,7 +155,7 @@ export default function AgentRunPage() {
 
   return (
     <div className="space-y-8">
-      <button 
+      <button
         onClick={() => router.back()}
         className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
       >
@@ -179,30 +184,28 @@ export default function AgentRunPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setPaymentType('solana_pay')}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                      paymentType === 'solana_pay' 
-                      ? 'border-blue-500 bg-blue-500/10 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]' 
-                      : 'border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:border-zinc-700'
-                    }`}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${paymentType === 'solana_pay'
+                        ? 'border-blue-500 bg-blue-500/10 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
+                        : 'border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:border-zinc-700'
+                      }`}
                   >
                     <CreditCard size={20} />
                     <span className="text-[10px] font-bold uppercase">Solana Pay</span>
                   </button>
                   <button
                     onClick={() => setPaymentType('escrow')}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                      paymentType === 'escrow' 
-                      ? 'border-purple-500 bg-purple-500/10 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.1)]' 
-                      : 'border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:border-zinc-700'
-                    }`}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${paymentType === 'escrow'
+                        ? 'border-purple-500 bg-purple-500/10 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.1)]'
+                        : 'border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:border-zinc-700'
+                      }`}
                   >
                     <ShieldCheck size={20} />
                     <span className="text-[10px] font-bold uppercase">Squads Vault</span>
                   </button>
                 </div>
                 <p className="text-[10px] text-zinc-500 leading-tight">
-                  {paymentType === 'solana_pay' 
-                    ? "Direct payment via Solana Pay. Fast and simple." 
+                  {paymentType === 'solana_pay'
+                    ? "Direct payment via Solana Pay. Fast and simple."
                     : "Secure Squads multi-sig vault. Funds released only on success."}
                 </p>
               </div>
@@ -218,11 +221,25 @@ export default function AgentRunPage() {
                     <span className="text-[10px] font-bold text-zinc-500 uppercase">Onchain Asset</span>
                   </div>
                 )}
-                {agent.risk_score !== undefined && (
-                  <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
-                    <span className="text-[10px] font-bold text-blue-400 uppercase">Risk (Simulated): {(agent.risk_score * 100).toFixed(0)}%</span>
+              </div>
+
+              {/* Agent Passport Section */}
+              <div className="pt-4 space-y-3">
+                <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">Agent Passport</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                    <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Reputation</p>
+                    <p className="text-xl font-bold text-green-400">{agent.reputation_score?.toFixed(0) || "100"}</p>
                   </div>
-                )}
+                  <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                    <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Reliability</p>
+                    <p className="text-xl font-bold text-blue-400">{((agent.reliability_score || 1) * 100).toFixed(0)}%</p>
+                  </div>
+                  <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl col-span-2">
+                    <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Total Proven Runs</p>
+                    <p className="text-lg font-bold text-zinc-300">{agent.total_runs || 0} Successful Cycles</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -235,7 +252,7 @@ export default function AgentRunPage() {
               <h3 className="font-bold">Configuration</h3>
             </CardHeader>
             <CardContent className="flex-1 space-y-6">
-              <TextArea 
+              <TextArea
                 label="Input Data (JSON)"
                 value={inputData}
                 onChange={(e) => setInputData(e.target.value)}
@@ -264,15 +281,15 @@ export default function AgentRunPage() {
               ) : !isAuthenticated ? (
                 <Button className="w-full" onClick={login}>Authenticate to Run</Button>
               ) : (
-                <Button 
-                  className="w-full h-14 text-lg gap-3 shadow-[0_0_20px_rgba(37,99,235,0.2)]" 
+                <Button
+                  className="w-full h-14 text-lg gap-3 shadow-[0_0_20px_rgba(37,99,235,0.2)]"
                   onClick={handleRun}
                   isLoading={status !== 'idle' && status !== 'done'}
                 >
                   {status === 'paying' ? 'Funding Vault...' :
-                   status === 'verifying' ? 'Verifying Vault...' :
-                   status === 'executing' ? 'Executing Agent...' :
-                   'Pay & Run Agent'}
+                    status === 'verifying' ? 'Verifying Vault...' :
+                      status === 'executing' ? 'Executing Agent...' :
+                        'Pay & Run Agent'}
                 </Button>
               )}
             </div>

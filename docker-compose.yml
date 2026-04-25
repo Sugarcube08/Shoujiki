@@ -20,6 +20,7 @@ services:
       context: ./apps/sandbox
     ports:
       - "8001:8001"
+    # runtime: runsc # Recommended for production: requires gVisor installed on host
     cap_add:
       - SYS_ADMIN
     security_opt:
@@ -60,7 +61,7 @@ services:
       - SANDBOX_URL=http://sandbox:8001
       - PLATFORM_SECRET_SEED=shoujiki_escrow_platform_secret_32
       - REDIS_HOST=redis
-    command: arq backend.core.tasks.WorkerSettings
+    command: python3 -m arq backend.core.tasks.WorkerSettings
 
   web:
     build:

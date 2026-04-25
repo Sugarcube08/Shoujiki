@@ -13,6 +13,15 @@ class Agent(Base):
     price = Column(Float, nullable=False)
     creator_wallet = Column(String, nullable=False, index=True)
     mint_address = Column(String, nullable=True, index=True) # Metaplex Core Asset Address
+    reputation_score = Column(Float, nullable=False, default=100.0) # Base 100
+    reliability_score = Column(Float, nullable=False, default=1.0) # 0.0 to 1.0 (success rate)
+    total_runs = Column(Float, nullable=False, default=0)
+    successful_runs = Column(Float, nullable=False, default=0)
+
+    # Treasury Fields
+    balance = Column(Float, nullable=False, default=0.0)
+    treasury_address = Column(String, nullable=True) # PDA or sub-wallet
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Task(Base):
@@ -36,3 +45,24 @@ class Payment(Base):
     amount = Column(Float, nullable=False)
     status = Column(String, default="locked") # locked, released
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Workflow(Base):
+    __tablename__ = "workflows"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    creator_wallet = Column(String, nullable=False, index=True)
+    steps = Column(JSON, nullable=False) # List of {agent_id, input_template}
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class WorkflowRun(Base):
+    __tablename__ = "workflow_runs"
+
+    id = Column(String, primary_key=True, index=True)
+    workflow_id = Column(String, ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False)
+    user_wallet = Column(String, nullable=False, index=True)
+    status = Column(String, default="pending") # pending, running, completed, failed
+    current_step_index = Column(Float, default=0)
+    results = Column(JSON, nullable=True) # List of results from each step
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

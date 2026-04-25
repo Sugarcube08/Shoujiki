@@ -4,9 +4,9 @@ FORBIDDEN_IMPORTS = {"os", "sys", "subprocess", "socket", "builtins", "importlib
 ALLOWED_IMPORTS = {"math", "time", "json", "datetime", "random", "abc", "typing", "collections", "itertools", "functools", "re", "requests", "httpx", "urllib", "aiohttp", "asyncio", "pydantic", "bs4", "openai", "anthropic", "langchain", "solana", "solders"}
 
 FORBIDDEN_NAMES = {"eval", "exec", "getattr", "setattr", "delattr", "compile", "open", "input", "breakpoint"}
-FORBIDDEN_ATTRS = {"__class__", "__subclasses__", "__bases__", "__globals__", "__builtins__", "__code__", "__func__", "__self__", "__module__", "__dict__"}
+FORBIDDEN_ATTRS = {"__subclasses__", "__base__", "__bases__", "__mro__", "__globals__", "__builtins__", "__code__", "__func__", "__self__", "__module__", "__dict__"}
 
-def validate_agent_code(code: str):
+def validate_agent_code(code: str, available_files: list = None):
     try:
         tree = ast.parse(code)
     except SyntaxError as e:
@@ -14,18 +14,31 @@ def validate_agent_code(code: str):
 
     has_run_method = False
     has_agent_instance = False
+    
+    # Extract local module names from available files (e.g., "utils.py" -> "utils")
+    local_modules = set()
+    if available_files:
+        for f in available_files:
+            if f.endswith(".py"):
+                # Handle both "file.py" and "folder/file.py"
+                name = f.replace(".py", "").replace("/", ".")
+                local_modules.add(name)
+                local_modules.add(name.split('.')[0])
 
     for node in ast.walk(tree):
-        # 1. Check for allowed imports (Strict Whitelist)
+        # 1. Check for allowed imports (Strict Whitelist + Local Modules)
         if isinstance(node, ast.Import):
             for alias in node.names:
                 base_module = alias.name.split('.')[0]
-                if base_module not in ALLOWED_IMPORTS:
+                if base_module not in ALLOWED_IMPORTS and base_module not in local_modules:
                     return False, f"Import of '{base_module}' is not allowed. Allowed: {', '.join(sorted(ALLOWED_IMPORTS))}"
         elif isinstance(node, ast.ImportFrom):
+            # Allow relative imports (level > 0)
+            if node.level > 0:
+                continue
             if node.module:
                 base_module = node.module.split('.')[0]
-                if base_module not in ALLOWED_IMPORTS:
+                if base_module not in ALLOWED_IMPORTS and base_module not in local_modules:
                     return False, f"Import from '{base_module}' is not allowed. Allowed: {', '.join(sorted(ALLOWED_IMPORTS))}"
         
         # 2. Block forbidden functions

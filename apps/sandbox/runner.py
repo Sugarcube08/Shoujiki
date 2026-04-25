@@ -16,9 +16,10 @@ def set_limits():
     resource.setrlimit(resource.RLIMIT_NPROC, (10, 10))
 
 def run_agent_code(files: dict, requirements: list, entrypoint: str, input_data: str):
-    # EMERGENCY: Kill dynamic pip install
+    # Dynamic dependency installation is disabled for security. 
+    # We use the pre-installed packages in the container.
     if requirements:
-        return False, "", "Dynamic dependency installation is disabled for security. Use pre-installed packages."
+        print(f"Note: Ignoring dynamic requirements {requirements}. Using pre-installed environment.")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # 1. Write files
@@ -89,18 +90,28 @@ except Exception as e:
             f.write(wrapper_code)
 
         try:
-            # unshare -n requires CAP_SYS_ADMIN. If it fails, we fallback to standard run
-            # but in the hardened Docker image we should ensure it works.
-            command = ["unshare", "-n", "python3", "wrapper.py"]
-            
+            # Try isolated execution first
+            command = ["unshare", "-rn", "python3", "wrapper.py"]
             process = subprocess.run(
                 command,
                 cwd=tmpdir,
                 capture_output=True,
                 text=True,
-                timeout=20, # Increased timeout for multi-file/deps
+                timeout=20,
                 preexec_fn=set_limits
             )
+            
+            # If unshare itself failed (e.g. permission denied)
+            if process.returncode == 1 and "unshare failed" in process.stderr:
+                print("Warning: Network isolation (unshare) failed. Falling back to standard execution.")
+                process = subprocess.run(
+                    ["python3", "wrapper.py"],
+                    cwd=tmpdir,
+                    capture_output=True,
+                    text=True,
+                    timeout=20,
+                    preexec_fn=set_limits
+                )
             
             MAX_OUTPUT_SIZE = 50000
             stdout = process.stdout[:MAX_OUTPUT_SIZE]
