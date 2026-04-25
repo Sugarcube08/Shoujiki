@@ -239,7 +239,7 @@ export default function DeploySpacePage() {
                   <div className="relative flex gap-6 items-start">
                     <div className={cn(
                       "w-12 h-12 rounded-2xl flex items-center justify-center border-4 border-zinc-950 z-10 transition-all duration-500 shadow-xl",
-                      status === 'minting' ? 'bg-purple-600 scale-110' : status === 'done' ? 'bg-green-600' : 'bg-zinc-800'
+                      status === 'minting' ? 'bg-purple-600 scale-110' : 'bg-zinc-800'
                     )}>
                        {status === 'minting' ? <Loader2 size={18} className="animate-spin text-white" /> : <Rocket size={18} className="text-white" />}
                     </div>
@@ -255,14 +255,12 @@ export default function DeploySpacePage() {
                   {/* Step 3 */}
                   <div className="relative flex gap-6 items-start">
                     <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center border-4 border-zinc-950 z-10 transition-all duration-500 shadow-xl bg-zinc-800",
-                      status === 'done' ? 'bg-green-600' : ''
+                      "w-12 h-12 rounded-2xl flex items-center justify-center border-4 border-zinc-950 z-10 transition-all duration-500 shadow-xl bg-zinc-800"
                     )}>
                       <ShieldCheck size={18} className="text-white" />
                     </div>
                     <div className={cn(
-                      "flex-1 p-6 bg-zinc-900/50 border border-zinc-800 rounded-3xl transition-all duration-500",
-                      status === 'done' ? 'border-green-500/50 bg-green-500/5' : ''
+                      "flex-1 p-6 bg-zinc-900/50 border border-zinc-800 rounded-3xl transition-all duration-500"
                     )}>
                       <h4 className="font-black text-sm uppercase tracking-wider text-white">03. Network Registry</h4>
                       <p className="text-xs text-zinc-500 font-medium mt-1">Broadcasting agent identity to global indexes.</p>
