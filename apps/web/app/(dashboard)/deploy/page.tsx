@@ -173,9 +173,9 @@ export default function DeploySpacePage() {
               <CardContent className="p-8 space-y-10">
                 <div className="space-y-8">
                   {[
-                    { label: "Neural Integrity", desc: "Verifying multi-file logic and AST safety.", active: status === 'validating', done: status !== 'idle' && status !== 'validating' },
-                    { label: "On-chain Identity", desc: "Generating unique Metaplex Core asset.", active: status === 'minting', done: status === 'done' },
-                    { label: "Network Registry", desc: "Broadcasting to global agent index.", active: false, done: status === 'done' }
+                    { label: "Neural Integrity", desc: "Verifying multi-file logic and AST safety.", active: status === 'validating', done: status === 'minting' },
+                    { label: "On-chain Identity", desc: "Generating unique Metaplex Core asset.", active: status === 'minting', done: false },
+                    { label: "Network Registry", desc: "Broadcasting to global agent index.", active: false, done: false }
                   ].map((step, i) => (
                     <div key={i} className="flex gap-6">
                        <div className={cn(
