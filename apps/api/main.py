@@ -35,15 +35,23 @@ async def lifespan(app: FastAPI):
     app.state.redis = await create_pool(RedisSettings(host=REDIS_HOST, port=REDIS_PORT))
     logger.info("Redis pool initialized")
 
-    # Startup: Create tables
-    try:
-        async with engine.begin() as conn:
-            # Import models here to ensure they are registered
-            from backend.db.models.models import Agent, Task, Payment
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created successfully")
-    except Exception as e:
-        logger.error(f"Error creating database tables: {e}")
+    # Startup: Create tables with retries (Wait for DB to awaken)
+    max_retries = 10
+    retry_delay = 3
+    for i in range(max_retries):
+        try:
+            async with engine.begin() as conn:
+                # Import models here to ensure they are registered
+                from backend.db.models.models import Agent, Task, Payment
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database connection established and tables verified.")
+            break
+        except Exception as e:
+            if i < max_retries - 1:
+                logger.warning(f"Database not ready yet (Attempt {i+1}/{max_retries}). Retrying in {retry_delay}s... Error: {e}")
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error(f"Critical: Could not connect to database after {max_retries} attempts. API may fail.")
     yield
     # Shutdown: Clean up resources if needed
     await engine.dispose()
