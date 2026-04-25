@@ -49,8 +49,8 @@ async def create_agent(db: AsyncSession, agent_data: AgentCreate, creator_wallet
         from backend.modules.billing.service import platform_keypair
         import struct
 
-        # Program ID for Metaplex Core
-        CORE_PROGRAM_ID = Pubkey.from_string("CoReZaAcv6kZ7v9KAbzRzs3xG7E4PzK2XG4zX7T")
+        # Program ID for Metaplex Core (Devnet/Mainnet)
+        CORE_PROGRAM_ID = Pubkey.from_string("CoREnoS9asZ9p6573C6xNRehFpBvK86ZfXv3L57H7A")
         
         asset_keypair = Keypair()
         mint_address = str(asset_keypair.pubkey())
