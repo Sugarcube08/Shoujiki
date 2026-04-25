@@ -89,18 +89,38 @@ except Exception as e:
             f.write(wrapper_code)
 
         try:
-            # unshare -n requires CAP_SYS_ADMIN. If it fails, we fallback to standard run
-            # but in the hardened Docker image we should ensure it works.
+            # 5. Execute in isolated environment
+            # We try 'unshare -n' for network isolation. 
+            # Note: This may fail in some environments (like Render free tier).
+            # We provide a fallback for compatibility while logging the security degradation.
             command = ["unshare", "-n", "python3", "wrapper.py"]
             
-            process = subprocess.run(
-                command,
-                cwd=tmpdir,
-                capture_output=True,
-                text=True,
-                timeout=20, # Increased timeout for multi-file/deps
-                preexec_fn=set_limits
-            )
+            try:
+                process = subprocess.run(
+                    command,
+                    cwd=tmpdir,
+                    capture_output=True,
+                    text=True,
+                    timeout=20,
+                    preexec_fn=set_limits
+                )
+                
+                # If unshare failed with permission error
+                if process.returncode != 0 and ("unshare failed" in process.stderr or "Operation not permitted" in process.stderr):
+                    raise PermissionError("unshare not permitted")
+                    
+            except (PermissionError, FileNotFoundError, subprocess.CalledProcessError):
+                # Fallback to standard execution if isolation is unavailable
+                print("WARNING: Namespace isolation (unshare) failed or not permitted. Falling back to standard execution.")
+                command = ["python3", "wrapper.py"]
+                process = subprocess.run(
+                    command,
+                    cwd=tmpdir,
+                    capture_output=True,
+                    text=True,
+                    timeout=20,
+                    preexec_fn=set_limits
+                )
             
             MAX_OUTPUT_SIZE = 50000
             stdout = process.stdout[:MAX_OUTPUT_SIZE]
