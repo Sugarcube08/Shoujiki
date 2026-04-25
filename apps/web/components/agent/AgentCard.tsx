@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
-import { Play, User, Trash2, BadgeCheck } from 'lucide-react';
+import { Play, User, Trash2, BadgeCheck, CreditCard, Wallet } from 'lucide-react';
 
 interface AgentCardProps {
   agent: {
@@ -15,12 +15,17 @@ interface AgentCardProps {
     creator_wallet: string;
     mint_address?: string;
     risk_score?: number;
+    reputation_score?: number;
+    reliability_score?: number;
+    balance?: number;
   };
   onDelete?: () => void;
   isDeleting?: boolean;
+  onWithdraw?: () => void;
+  isWithdrawing?: boolean;
 }
 
-export const AgentCard = ({ agent, onDelete, isDeleting }: AgentCardProps) => {
+export const AgentCard = ({ agent, onDelete, isDeleting, onWithdraw, isWithdrawing }: AgentCardProps) => {
   const truncatedWallet = `${agent.creator_wallet.slice(0, 4)}...${agent.creator_wallet.slice(-4)}`;
 
   return (
@@ -41,10 +46,21 @@ export const AgentCard = ({ agent, onDelete, isDeleting }: AgentCardProps) => {
                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">Onchain Asset</span>
                 </div>
               )}
-              {agent.risk_score !== undefined && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full w-fit">
-                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">
-                    Risk: {(agent.risk_score * 100).toFixed(0)}%
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full w-fit">
+                <span className="text-[10px] font-bold text-green-400 uppercase tracking-tighter">
+                  Reputation: {agent.reputation_score?.toFixed(0) || "100"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full w-fit">
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">
+                  Reliability: {((agent.reliability_score || 1) * 100).toFixed(0)}%
+                </span>
+              </div>
+              {agent.balance !== undefined && agent.balance > 0 && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full w-fit">
+                  <Wallet size={10} className="text-yellow-400" />
+                  <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-tighter">
+                    Treasury: {agent.balance.toFixed(2)} SOL
                   </span>
                 </div>
               )}
@@ -68,36 +84,50 @@ export const AgentCard = ({ agent, onDelete, isDeleting }: AgentCardProps) => {
         </p>
       </CardContent>
 
-      <CardFooter className="flex gap-2 relative z-10 mt-2">
-        {agent.id ? (
-          <Link href={`/agent/${agent.id}`} className="flex-1">
+      <CardFooter className="flex flex-col gap-2 relative z-10 mt-2">
+        <div className="flex gap-2 w-full">
+          {agent.id ? (
+            <Link href={`/agent/${agent.id}`} className="flex-1">
+              <Button 
+                className="w-full gap-2 font-bold py-5 rounded-xl transition-all shadow-lg border-zinc-700 hover:border-blue-500" 
+                variant="secondary"
+              >
+                <Play size={14} fill="currentColor" />
+                Run
+              </Button>
+            </Link>
+          ) : (
             <Button 
-              className="w-full gap-2 font-bold py-5 rounded-xl transition-all shadow-lg border-zinc-700 hover:border-blue-500" 
+              className="flex-1 gap-2 opacity-50 cursor-not-allowed py-5 rounded-xl" 
               variant="secondary"
+              disabled
             >
               <Play size={14} fill="currentColor" />
-              Configure & Run
+              Invalid Agent
             </Button>
-          </Link>
-        ) : (
-          <Button 
-            className="flex-1 gap-2 opacity-50 cursor-not-allowed py-5 rounded-xl" 
-            variant="secondary"
-            disabled
-          >
-            <Play size={14} fill="currentColor" />
-            Invalid Agent
-          </Button>
-        )}
+          )}
+
+          {onWithdraw && agent.balance !== undefined && agent.balance > 0 && (
+            <Button
+              className="flex-1 gap-2 font-bold py-5 rounded-xl bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/20 transition-all"
+              onClick={onWithdraw}
+              isLoading={isWithdrawing}
+            >
+              <CreditCard size={14} />
+              Withdraw
+            </Button>
+          )}
+        </div>
+
         {onDelete && (
           <Button
             variant="outline"
-            className="px-3 py-5 rounded-xl border-zinc-800 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-500 transition-colors"
+            className="w-full gap-2 py-4 rounded-xl border-zinc-800 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-500 transition-colors text-xs font-bold"
             onClick={onDelete}
             isLoading={isDeleting}
-            title="Delete Agent"
           >
-            <Trash2 size={16} />
+            <Trash2 size={14} />
+            Terminate Agent
           </Button>
         )}
       </CardFooter>

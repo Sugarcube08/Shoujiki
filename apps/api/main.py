@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import engine, Base, get_db
@@ -7,17 +7,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.modules.auth.routes import router as auth_router
 from backend.modules.agents.routes import router as agents_router
 from backend.modules.billing.routes import router as billing_router
+from backend.modules.workflows.routes import router as workflows_router
 from backend.modules.auth.middleware import X402PaymentMiddleware
 from arq import create_pool
 from arq.connections import RedisSettings
 import os
 import logging
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
 @asynccontextmanager
@@ -70,6 +72,32 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(agents_router, prefix="/agents", tags=["agents"])
 app.include_router(billing_router, prefix="/billing", tags=["billing"])
+app.include_router(workflows_router, prefix="/workflows", tags=["workflows"])
+
+@app.websocket("/ws/tasks/{task_id}")
+async def websocket_endpoint(websocket: WebSocket, task_id: str):
+    await websocket.accept()
+    logger.info(f"WebSocket: Client connected for task {task_id}")
+    
+    redis = app.state.redis
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"task:{task_id}")
+    
+    try:
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                data = message["data"].decode("utf-8")
+                await websocket.send_text(data)
+                
+                # If task is finished, we can close the connection
+                msg_json = json.loads(data)
+                if msg_json.get("status") in ["completed", "failed"]:
+                    break
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket: Client disconnected for task {task_id}")
+    finally:
+        await pubsub.unsubscribe(f"task:{task_id}")
+        await pubsub.close()
 
 @app.get("/health")
 async def health_check():

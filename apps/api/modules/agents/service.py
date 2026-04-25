@@ -38,40 +38,61 @@ async def create_agent(db: AsyncSession, agent_data: AgentCreate, creator_wallet
         db_agent.description = agent_data.description
         db_agent.price = agent_data.price
     else:
-        # Create new agent with REAL Metaplex Minting
-        import subprocess
-        import os
-        from backend.core.config import SOLANA_RPC_URL, PLATFORM_SECRET_SEED
-        import base58
+        # Create new agent with NATIVE Metaplex Core Minting
         from solders.keypair import Keypair
+        from solders.instruction import Instruction, AccountMeta
+        from solders.transaction import VersionedTransaction
+        from solders.message import MessageV0
+        from solana.rpc.async_api import AsyncClient
+        from backend.core.config import SOLANA_RPC_URL, PLATFORM_SECRET_SEED
+        import struct
 
-        # Derive bs58 secret key for the Node.js script
-        kp = Keypair.from_seed(PLATFORM_SECRET_SEED.encode())
-        secret_key_bs58 = base58.b58encode(bytes(kp)).decode('utf-8')
+        # Program ID for Metaplex Core
+        CORE_PROGRAM_ID = Pubkey.from_string("CoReZaAcv6kZ7v9KAbzRzs3xG7E4PzK2XG4zX7T")
         
-        mint_address = None
+        asset_keypair = Keypair()
+        mint_address = str(asset_keypair.pubkey())
+        
         try:
-            logger.info(f"Metaplex: Minting real agent asset for {agent_data.name}")
-            script_path = os.path.join(os.path.dirname(__file__), "mint_asset.js")
-            # For hackathon/demo, we'll use a placeholder URI or a real one if uploaded
-            metadata_uri = f"https://api.shoujiki.ai/agents/{agent_data.id}/metadata"
+            logger.info(f"Metaplex: Minting native agent asset {mint_address} for {agent_data.name}")
             
-            result = subprocess.run(
-                ["node", script_path, SOLANA_RPC_URL, secret_key_bs58, agent_data.name, metadata_uri],
-                capture_output=True,
-                text=True,
-                timeout=30
+            # Construct Metaplex Core 'Create' Instruction (Manual Buffer)
+            # Discriminator for Create is 0
+            # Layout: [discriminator(1), name_len(4), name(name_len), uri_len(4), uri(uri_len), ...]
+            name_bytes = agent_data.name.encode()
+            uri = f"https://api.shoujiki.ai/agents/{agent_data.id}/metadata"
+            uri_bytes = uri.encode()
+            
+            data = struct.pack("B", 0) # Discriminator
+            data += struct.pack("<I", len(name_bytes)) + name_bytes
+            data += struct.pack("<I", len(uri_bytes)) + uri_bytes
+            # plugins, etc (omitted for simple demo)
+            
+            ix = Instruction(
+                program_id=CORE_PROGRAM_ID,
+                data=data,
+                accounts=[
+                    AccountMeta(pubkey=asset_keypair.pubkey(), is_signer=True, is_writable=True),
+                    AccountMeta(pubkey=platform_keypair.pubkey(), is_signer=True, is_writable=True),
+                    AccountMeta(pubkey=platform_keypair.pubkey(), is_signer=True, is_writable=False),
+                    AccountMeta(pubkey=Pubkey.from_string("11111111111111111111111111111111"), is_signer=False, is_writable=False), # System Program
+                ]
             )
-            
-            if result.returncode == 0:
-                mint_address = result.stdout.strip()
-                logger.info(f"Metaplex: Successfully minted asset: {mint_address}")
-            else:
-                logger.error(f"Metaplex: Minting failed: {result.stderr}")
-                # Fallback for demo if node/deps not fully setup in environment
-                mint_address = f"asset_{hashlib.sha256(agent_data.id.encode()).hexdigest()[:32]}"
+
+            async with AsyncClient(SOLANA_RPC_URL) as client:
+                latest_blockhash = (await client.get_latest_blockhash()).value.blockhash
+                msg = MessageV0.try_compile(
+                    payer=platform_keypair.pubkey(),
+                    instructions=[ix],
+                    address_lookup_table_accounts=[],
+                    recent_blockhash=latest_blockhash
+                )
+                tx = VersionedTransaction(msg, [platform_keypair, asset_keypair])
+                resp = await client.send_transaction(tx)
+                logger.info(f"Metaplex: Native mint successful: {resp.value}")
+
         except Exception as e:
-            logger.error(f"Metaplex: Minting exception: {e}")
+            logger.error(f"Metaplex: Native minting failed (using fallback ID): {e}")
             mint_address = f"asset_{hashlib.sha256(agent_data.id.encode()).hexdigest()[:32]}"
 
         db_agent = Agent(

@@ -1,63 +1,102 @@
 import ast
+import json
+import os
+from pathlib import Path
 
-FORBIDDEN_IMPORTS = {"os", "sys", "subprocess", "socket", "builtins", "importlib", "shutil", "pathlib", "pty", "multiprocessing", "threading"}
-ALLOWED_IMPORTS = {"math", "time", "json", "datetime", "random", "abc", "typing", "collections", "itertools", "functools", "re", "requests", "httpx", "urllib", "aiohttp", "asyncio", "pydantic", "bs4", "openai", "anthropic", "langchain", "solana", "solders"}
+class AgentValidator(ast.NodeVisitor):
+    def __init__(self, available_files=None):
+        self.policy = self._load_policy()
+        self.errors = []
+        self.has_run_method = False
+        self.has_agent_instance = False
+        
+        # Flatten allowed imports for easy checking
+        self.allowed_imports = set()
+        for category in self.policy.get("allowed_imports", {}).values():
+            self.allowed_imports.update(category)
+            
+        self.forbidden_names = set(self.policy.get("forbidden_names", []))
+        self.forbidden_attrs = set(self.policy.get("forbidden_attributes", []))
+        
+        # Track local modules
+        self.local_modules = set()
+        if available_files:
+            for f in available_files:
+                if f.endswith(".py"):
+                    name = f.replace(".py", "").replace("/", ".")
+                    self.local_modules.add(name)
+                    self.local_modules.add(name.split('.')[0])
 
-FORBIDDEN_NAMES = {"eval", "exec", "getattr", "setattr", "delattr", "compile", "open", "input", "breakpoint"}
-FORBIDDEN_ATTRS = {"__class__", "__subclasses__", "__bases__", "__globals__", "__builtins__", "__code__", "__func__", "__self__", "__module__", "__dict__"}
+    def _load_policy(self):
+        policy_path = Path(__file__).parent.parent.parent / "core" / "agent_policy.json"
+        try:
+            with open(policy_path, "r") as f:
+                return json.load(f)
+        except Exception:
+            # Fallback to a minimal safe policy if file is missing
+            return {
+                "allowed_imports": {"core": ["math", "json", "time"]},
+                "forbidden_names": ["eval", "exec", "open"],
+                "forbidden_attributes": ["__subclasses__"]
+            }
 
-def validate_agent_code(code: str):
+    def visit_Import(self, node):
+        for alias in node.names:
+            base_module = alias.name.split('.')[0]
+            if base_module not in self.allowed_imports and base_module not in self.local_modules:
+                self.errors.append(f"Import of '{base_module}' is not allowed.")
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node):
+        if node.level > 0:
+            return # Allow relative imports
+        if node.module:
+            base_module = node.module.split('.')[0]
+            if base_module not in self.allowed_imports and base_module not in self.local_modules:
+                self.errors.append(f"Import from '{base_module}' is not allowed.")
+        self.generic_visit(node)
+
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name):
+            if node.func.id in self.forbidden_names:
+                self.errors.append(f"Call to forbidden function '{node.func.id}' is not allowed.")
+        elif isinstance(node.func, ast.Attribute):
+            if node.func.attr in self.forbidden_attrs:
+                self.errors.append(f"Access to forbidden attribute '{node.func.attr}' is not allowed.")
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node):
+        if node.attr in self.forbidden_attrs:
+            self.errors.append(f"Access to forbidden attribute '{node.attr}' is not allowed.")
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node):
+        for item in node.body:
+            if isinstance(item, ast.FunctionDef) and item.name == "run":
+                args = [arg.arg for arg in item.args.args]
+                if len(args) >= 2: # self + data
+                    self.has_run_method = True
+        self.generic_visit(node)
+
+    def visit_Assign(self, node):
+        for target in node.targets:
+            if isinstance(target, ast.Name) and target.id == "agent":
+                self.has_agent_instance = True
+        self.generic_visit(node)
+
+def validate_agent_code(code: str, available_files: list = None):
     try:
         tree = ast.parse(code)
     except SyntaxError as e:
-        return False, f"Syntax error in agent code: {e}"
+        return False, f"Syntax error: {e}"
 
-    has_run_method = False
-    has_agent_instance = False
+    validator = AgentValidator(available_files)
+    validator.visit(tree)
 
-    for node in ast.walk(tree):
-        # 1. Check for allowed imports (Strict Whitelist)
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                base_module = alias.name.split('.')[0]
-                if base_module not in ALLOWED_IMPORTS:
-                    return False, f"Import of '{base_module}' is not allowed. Allowed: {', '.join(sorted(ALLOWED_IMPORTS))}"
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                base_module = node.module.split('.')[0]
-                if base_module not in ALLOWED_IMPORTS:
-                    return False, f"Import from '{base_module}' is not allowed. Allowed: {', '.join(sorted(ALLOWED_IMPORTS))}"
-        
-        # 2. Block forbidden functions
-        elif isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Name):
-                if node.func.id in FORBIDDEN_NAMES:
-                    return False, f"Call to forbidden function '{node.func.id}' is not allowed"
-            elif isinstance(node.func, ast.Attribute):
-                if node.func.attr in FORBIDDEN_ATTRS:
-                    return False, f"Access to forbidden attribute '{node.func.attr}' is not allowed"
+    if validator.errors:
+        return False, validator.errors[0] # Return first error for simplicity
 
-        # 3. Block forbidden attribute access
-        elif isinstance(node, ast.Attribute):
-            if node.attr in FORBIDDEN_ATTRS:
-                return False, f"Access to forbidden attribute '{node.attr}' is not allowed"
-
-        # 4. Check for classes with run method
-        if isinstance(node, ast.ClassDef):
-            for item in node.body:
-                if isinstance(item, ast.FunctionDef) and item.name == "run":
-                    args = [arg.arg for arg in item.args.args]
-                    # 'run(self, data)' or 'run(self, input_data)' should have at least 2 args
-                    if len(args) >= 2:
-                        has_run_method = True
-
-        # 3. Check for 'agent' instance assignment
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "agent":
-                    has_agent_instance = True
-
-    if not has_run_method:
-        return False, "Code must define a class with a 'run(self, input_data)' method"
+    if not validator.has_run_method and not validator.has_agent_instance:
+        return False, "Code must define a class with a 'run' method or an 'agent' instance."
 
     return True, "Success"

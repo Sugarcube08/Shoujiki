@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy everything into a 'backend' directory so imports like 'from backend.x' work
 COPY . backend/
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python3", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -15,28 +15,36 @@ SQUADS_PROGRAM_ID = Pubkey.from_string(CONFIG_PROGRAM_ID)
 platform_keypair = Keypair.from_seed(PLATFORM_SECRET_SEED.encode())
 PLATFORM_WALLET = str(platform_keypair.pubkey())
 
+ESCROW_PROGRAM_ID = Pubkey.from_string("SHoujikiEscrow11111111111111111111111111111")
+
+def get_anchor_discriminator(name: str) -> bytes:
+    """Compute Anchor discriminator for a method name."""
+    return hashlib.sha256(f"global:{name}".encode()).digest()[:8]
+
 async def verify_solana_payment(tx_signature: str, expected_amount_sol: float, sender_wallet: str, reference: str):
     """
     Verify payment strictly by checking the specific transaction signature.
-    Verifies:
-    1. Transaction exists
-    2. Sender matches current_user
-    3. Recipient is PLATFORM_WALLET
-    4. Amount matches agent price
-    5. Reference account is present in the transaction
+    Supports both legacy transfers and the new on-chain escrow program.
     """
     async with AsyncClient(SOLANA_RPC_URL) as client:
         try:
             logger.info(f"Strictly verifying payment signature: {tx_signature}")
             
-            # 1. Fetch transaction details
-            tx_resp = await client.get_transaction(
-                tx_signature, 
-                encoding="jsonParsed", 
-                max_supported_transaction_version=0
-            )
-            if not tx_resp.value:
-                return False, "Transaction not found on-chain"
+            # Retry loop for slow RPC/Finalization
+            tx_resp = None
+            for i in range(5):
+                tx_resp = await client.get_transaction(
+                    tx_signature, 
+                    encoding="jsonParsed", 
+                    max_supported_transaction_version=0
+                )
+                if tx_resp.value:
+                    break
+                logger.info(f"Tx {tx_signature} not found yet, retrying {i+1}/5...")
+                await asyncio.sleep(2)
+
+            if not tx_resp or not tx_resp.value:
+                return False, "Transaction not found on-chain (timeout)"
             
             tx = tx_resp.value.transaction
             # 2. Verify sender (first account is usually fee payer/sender)
@@ -44,34 +52,43 @@ async def verify_solana_payment(tx_signature: str, expected_amount_sol: float, s
             if actual_sender != sender_wallet:
                 return False, f"Sender mismatch. Expected {sender_wallet}, got {actual_sender}"
             
-            # 3. Check instructions for transfer to platform AND the reference
+            # 3. Check instructions for EITHER a direct transfer OR an escrow initialization
             instructions = tx.transaction.message.instructions
             expected_lamports = int(expected_amount_sol * 1e9)
             
-            payment_verified = False
-            reference_verified = False
+            verified = False
+            init_escrow_disc = get_anchor_discriminator("initialize_escrow")
             
             for ix in instructions:
+                # Case A: Legacy System Program Transfer
                 if hasattr(ix, 'parsed') and ix.program == "system":
                     info = ix.parsed.get("info")
                     if info and info.get("destination") == PLATFORM_WALLET:
                         amount = info.get("lamports", 0)
                         if amount >= expected_lamports * 0.99:
-                            payment_verified = True
-                    
-                    # Check if reference is in this instruction's keys or the message account keys
-                    # In standard Solana Pay / our escrow logic, reference is an extra account
+                            # Check if reference is in accounts
+                            account_keys = [str(acc.pubkey) for acc in tx.transaction.message.account_keys]
+                            if reference in account_keys:
+                                verified = True
+                                break
+
+                # Case B: On-chain Escrow Program Call (Anchor)
+                # Check for the program ID and instruction discriminator
+                # Some RPCs might return programId instead of program
+                program_id = str(ix.program_id) if hasattr(ix, 'program_id') else str(ix.program)
+                if program_id == str(ESCROW_PROGRAM_ID):
+                    if hasattr(ix, 'data'):
+                        import base58
+                        raw_data = base58.b58decode(ix.data)
+                        if raw_data.startswith(init_escrow_disc):
+                            # amount (u64) is at offset 8
+                            amt_val = struct.unpack("<Q", raw_data[8:16])[0]
+                            if amt_val >= expected_lamports * 0.99:
+                                verified = True
+                                break
             
-            # Check all account keys in the transaction for the reference
-            account_keys = [str(acc.pubkey) for acc in tx.transaction.message.account_keys]
-            if reference in account_keys:
-                reference_verified = True
-            
-            if not payment_verified:
-                return False, f"Transfer to platform wallet {PLATFORM_WALLET} not found or amount incorrect"
-            
-            if not reference_verified:
-                return False, f"Reference {reference} not found in transaction accounts"
+            if not verified:
+                return False, "Valid transfer or escrow initialization not found in transaction"
             
             logger.info(f"Payment verified successfully: {tx_signature}")
             return True, tx_signature
@@ -218,18 +235,102 @@ async def transfer_sol(recipient_wallet: str, amount_sol: float):
 
 async def settle_task_payment(task_id: str, agent_creator_wallet: str, success: bool, amount_sol: float = 0.01):
     """
-    Settle the task payment by transferring from platform wallet to creator on success.
+    Settle the task payment by crediting the agent's balance on success.
+    The funds stay in the platform wallet until a withdrawal is requested.
     """
     if not success:
-        logger.info(f"Task {task_id} failed. No payout triggered.")
+        logger.info(f"Task {task_id} failed. No balance credited.")
         return True, "Task failed, no payout"
 
-    logger.info(f"Settling payment for task {task_id}: {amount_sol} SOL to {agent_creator_wallet}")
-    ok, tx_sig = await transfer_sol(agent_creator_wallet, amount_sol)
+    async with AsyncSessionLocal() as db:
+        # Find the agent associated with this task
+        from backend.db.models.models import Task, Agent
+        task_res = await db.execute(select(Task).where(Task.id == task_id))
+        task = task_res.scalars().first()
+        if task:
+            agent_res = await db.execute(select(Agent).where(Agent.id == task.agent_id))
+            agent = agent_res.scalars().first()
+            if agent:
+                agent.balance += amount_sol
+                await db.commit()
+                logger.info(f"Task {task_id} settled: {amount_sol} SOL credited to agent {agent.id}")
+                return True, f"Credited {amount_sol} SOL"
     
-    if ok:
-        logger.info(f"Task settlement successful: {tx_sig}")
-        return True, tx_sig
-    else:
-        logger.error(f"Task settlement failed: {tx_sig}")
-        return False, tx_sig
+    return False, "Agent not found"
+async def settle_task_payment_onchain(task_id: str, user_wallet: str, creator_wallet: str, success: bool, receipt_hash_hex: str):
+    """
+    Settles the on-chain escrow by releasing funds to the creator or refunding the user.
+    Includes the execution receipt hash for on-chain provenance.
+    """
+    async with AsyncClient(SOLANA_RPC_URL) as client:
+        try:
+            # 1. Derive Escrow PDA
+            escrow_pda, _ = Pubkey.find_program_address(
+                [b"escrow", task_id.encode()],
+                ESCROW_PROGRAM_ID
+            )
+
+            # 2. Construct release_funds instruction
+            # Discriminator (8 bytes) + success (bool, 1 byte) + receipt_hash ([u8; 32], 32 bytes)
+            disc = get_anchor_discriminator("release_funds")
+
+            # Convert hex hash to bytes
+            receipt_hash = bytes.fromhex(receipt_hash_hex)
+
+            data = disc + struct.pack("?", success) + receipt_hash
+
+            ix = Instruction(
+                program_id=ESCROW_PROGRAM_ID,
+                data=data,
+                accounts=[
+                    AccountMeta(pubkey=escrow_pda, is_signer=False, is_writable=True),
+                    AccountMeta(pubkey=Pubkey.from_string(user_wallet), is_signer=False, is_writable=True),
+                    AccountMeta(pubkey=Pubkey.from_string(creator_wallet), is_signer=False, is_writable=True),
+                    AccountMeta(pubkey=platform_keypair.pubkey(), is_signer=True, is_writable=False),
+                ]
+            )
+            
+            # 3. Create and sign transaction
+            latest_blockhash = (await client.get_latest_blockhash()).value.blockhash
+            msg = MessageV0.try_compile(
+                payer=platform_keypair.pubkey(),
+                instructions=[ix],
+                address_lookup_table_accounts=[],
+                recent_blockhash=latest_blockhash
+            )
+            tx = VersionedTransaction(msg, [platform_keypair])
+            
+            # 4. Send transaction
+            resp = await client.send_transaction(tx)
+            logger.info(f"Escrow settlement successful: {resp.value}")
+            return True, str(resp.value)
+        except Exception as e:
+            logger.error(f"On-chain escrow settlement error: {e}")
+            return False, str(e)
+
+async def withdraw_agent_funds(agent_id: str, creator_wallet: str):
+    """
+    Withdraw agent earnings to the creator's wallet on-chain.
+    """
+    async with AsyncSessionLocal() as db:
+        from backend.db.models.models import Agent
+        result = await db.execute(select(Agent).where(Agent.id == agent_id))
+        agent = result.scalars().first()
+        
+        if not agent:
+            return False, "Agent not found"
+        if agent.creator_wallet != creator_wallet:
+            return False, "Unauthorized withdrawal"
+        if agent.balance <= 0:
+            return False, "Insufficient balance"
+        
+        amount_to_send = agent.balance
+        logger.info(f"Worker: Withdrawing {amount_to_send} SOL for agent {agent_id} to {creator_wallet}")
+        
+        ok, tx_sig = await transfer_sol(creator_wallet, amount_to_send)
+        if ok:
+            agent.balance = 0.0
+            await db.commit()
+            return True, tx_sig
+        else:
+            return False, tx_sig

@@ -1,0 +1,15 @@
+{
+  "allowed_imports": {
+    "core": ["abc", "typing", "collections", "itertools", "functools", "re", "datetime", "time", "json", "random", "math", "asyncio"],
+    "networking": ["requests", "httpx", "urllib", "aiohttp"],
+    "ai": ["openai", "anthropic", "langchain"],
+    "blockchain": ["solana", "solders"],
+    "data": ["pydantic", "bs4", "numpy"],
+    "internal": ["shoujiki"]
+  },
+  "forbidden_names": ["eval", "exec", "getattr", "setattr", "delattr", "compile", "open", "input", "breakpoint"],
+  "forbidden_attributes": ["__subclasses__", "__base__", "__bases__", "__mro__", "__globals__", "__builtins__", "__code__", "__func__", "__self__", "__module__", "__dict__"],
+  "limits": {
+    "max_code_size_bytes": 1048576
+  }
+}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List
@@ -85,7 +85,7 @@ async def test_agent(
     if not entry_code:
         raise HTTPException(status_code=400, detail=f"Entrypoint {req.entrypoint} not found")
         
-    valid, msg = validate_agent_code(entry_code)
+    valid, msg = validate_agent_code(entry_code, available_files=list(req.files.keys()))
     if not valid:
         raise HTTPException(status_code=400, detail=msg)
     
@@ -107,11 +107,59 @@ async def deploy_agent(
     if not entry_code:
         raise HTTPException(status_code=400, detail=f"Entrypoint {req.entrypoint} not found in files")
         
-    valid, msg = validate_agent_code(entry_code)
+    valid, msg = validate_agent_code(entry_code, available_files=list(req.files.keys()))
     if not valid:
         raise HTTPException(status_code=400, detail=msg)
     
     return await agent_service.create_agent(db, req, current_user)
+
+@router.post("/deploy/zip", response_model=AgentResponse)
+async def deploy_agent_zip(
+    file: UploadFile = File(...),
+    id: str = Form(...),
+    name: str = Form(...),
+    description: str = Form(""),
+    price: float = Form(0.01),
+    entrypoint: str = Form("main.py"),
+    db: AsyncSession = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    import zipfile
+    import io
+    
+    # 1. Read and extract ZIP
+    zip_bytes = await file.read()
+    zip_buffer = io.BytesIO(zip_bytes)
+    
+    files = {}
+    with zipfile.ZipFile(zip_buffer, "r") as zip_ref:
+        for filename in zip_ref.namelist():
+            if not filename.endswith('/'): # Skip directories
+                with zip_ref.open(filename) as f:
+                    files[filename] = f.read().decode('utf-8', errors='ignore')
+    
+    # 2. Validate entrypoint
+    entry_code = files.get(entrypoint)
+    if not entry_code:
+        raise HTTPException(status_code=400, detail=f"Entrypoint {entrypoint} not found in zip")
+        
+    valid, msg = validate_agent_code(entry_code, available_files=list(files.keys()))
+    if not valid:
+        raise HTTPException(status_code=400, detail=msg)
+    
+    # 3. Create Agent object for service
+    agent_data = AgentCreate(
+        id=id,
+        name=name,
+        description=description,
+        price=price,
+        files=files,
+        requirements=[], # Standard pre-installed env
+        entrypoint=entrypoint,
+        version="v1"
+    )
+    
+    return await agent_service.create_agent(db, agent_data, current_user)
 
 @router.get("/tasks", response_model=List[TaskHistoryResponse])
 async def list_my_tasks(

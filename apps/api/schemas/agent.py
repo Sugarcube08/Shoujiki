@@ -32,6 +32,14 @@ class AgentResponse(AgentBase):
     current_version: str
     creator_wallet: str
     mint_address: Optional[str] = None
+    reputation_score: float
+    reliability_score: float
+    contribution_score: float
+    trust_level: str
+    total_runs: int
+    successful_runs: int
+    balance: float
+    treasury_address: Optional[str] = None
     created_at: datetime
 
     class Config:

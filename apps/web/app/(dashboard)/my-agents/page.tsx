@@ -7,14 +7,16 @@ import { Loader2, Plus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
+import axios from 'axios';
 
 export default function MyAgentsPage() {
   const router = useRouter();
   const { isAuthenticated, login, connected } = useWalletAuth();
   
-  const [agents, setAgents] = useState([]);
+  const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -39,6 +41,24 @@ export default function MyAgentsPage() {
       alert('Failed to delete agent');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleWithdraw = async (id: string) => {
+    setWithdrawingId(id);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await axios.post(`${API_URL}/billing/agent/${id}/withdraw`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('shoujiki_token')}` }
+      });
+      alert(`Withdrawal successful! Tx: ${res.data.tx_signature}`);
+      // Update balance locally
+      setAgents(agents.map((a: any) => a.id === id ? { ...a, balance: 0 } : a));
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Failed to withdraw funds');
+    } finally {
+      setWithdrawingId(null);
     }
   };
 
@@ -94,6 +114,8 @@ export default function MyAgentsPage() {
               agent={agent} 
               onDelete={() => handleDelete(agent.id)}
               isDeleting={deletingId === agent.id}
+              onWithdraw={() => handleWithdraw(agent.id)}
+              isWithdrawing={withdrawingId === agent.id}
             />
           ))}
         </div>

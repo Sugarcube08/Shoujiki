@@ -7,17 +7,17 @@ RUN apt-get update && apt-get install -y \
     util-linux \
     && rm -rf /var/lib/apt/lists/*
 
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
 # Create a non-root user
 RUN useradd -m sandboxuser
 RUN chown -R sandboxuser:sandboxuser /app
 
 USER sandboxuser
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
 COPY . .
 
 # Sandbox runs on 8001
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["python3", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
