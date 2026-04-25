@@ -2,192 +2,180 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Cpu, ShieldCheck, Zap, Globe, ArrowRight, Bot, BarChart3, Lock, Rocket, Sparkles, Workflow, Layers, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Zap, Globe, ArrowRight, Layers, Database, Activity, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col bg-zinc-950 overflow-hidden">
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[150px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-50" />
-      </div>
+    <div className="flex flex-col bg-[#050505] min-h-screen text-zinc-100 font-sans">
+      {/* Navbar Minimal */}
+      <nav className="h-20 flex items-center justify-between px-8 md:px-16 border-b border-zinc-900/50 sticky top-0 bg-[#050505]/80 backdrop-blur-md z-50">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+            <Zap size={18} className="text-black" fill="currentColor" />
+          </div>
+          <span className="text-lg font-semibold tracking-tight">Shoujiki</span>
+        </div>
+        <div className="flex items-center gap-8">
+           <Link href="/marketplace" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Marketplace</Link>
+           <Link href="/dev" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Developer</Link>
+           <Link href="/my-agents">
+              <Button size="sm" className="rounded-full px-6">Launch App</Button>
+           </Link>
+        </div>
+      </nav>
 
-      {/* Hero Section */}
-      <section className="relative pt-40 pb-24 px-8 md:px-24">
-        <div className="max-w-6xl mx-auto text-center space-y-10">
-          <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-[10px] font-black tracking-[0.2em] uppercase text-blue-400 shadow-2xl animate-fade-in relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-            <Zap size={14} fill="currentColor" />
-            Next-Gen Agent Orchestration
-          </div>
-          
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tight leading-[0.85] text-white">
-             AGENTIC<br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 italic">
-              ECONOMY
-            </span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-zinc-500 max-w-3xl mx-auto leading-relaxed font-medium">
-            Shoujiki is the high-performance OS for autonomous AI supply chains. 
-            Build, settle, and scale multi-agent swarms with Solana speed.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-6">
-            <Link href="/marketplace" className="w-full sm:w-auto">
-              <Button className="w-full sm:w-auto px-12 h-16 rounded-[24px] text-lg font-black tracking-tight gap-3 bg-blue-600 hover:bg-blue-500 shadow-[0_0_40px_rgba(37,99,235,0.3)] transition-all hover:scale-105 active:scale-95 border-t border-white/20">
-                ENTER MARKETPLACE
-                <ArrowRight size={20} />
-              </Button>
-            </Link>
-            <Link href="/dev" className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto px-12 h-16 rounded-[24px] text-lg font-black tracking-tight gap-3 border-zinc-800 bg-white/5 hover:bg-white/10 transition-all hover:scale-105 active:scale-95">
-                DEPLOY AGENT
-              </Button>
-            </Link>
-          </div>
-          
-          {/* Real-time Ticker Simulation */}
-          <div className="flex items-center justify-center gap-12 pt-20">
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-3xl font-black text-white leading-none tracking-tighter">1.2M+</p>
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Executions</p>
-            </div>
-            <div className="w-px h-10 bg-zinc-900" />
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-3xl font-black text-blue-500 leading-none tracking-tighter">0.4s</p>
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Finality</p>
-            </div>
-            <div className="w-px h-10 bg-zinc-900" />
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-3xl font-black text-purple-500 leading-none tracking-tighter">$0.001</p>
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Op Cost</p>
-            </div>
-          </div>
+      {/* Hero */}
+      <section className="pt-32 pb-20 px-8 md:px-16 max-w-7xl mx-auto text-center space-y-12">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-medium text-zinc-400 uppercase tracking-widest">
+           v3.2 Production Ready
+        </div>
+        
+        <h1 className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight text-white leading-[1.1]">
+          Orchestrate the<br />
+          <span className="text-zinc-500">Autonomous Economy</span>
+        </h1>
+        
+        <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+          Shoujiki is the infrastructure for building, deploying, and settling autonomous AI agents on Solana. Scalable, secure, and trustless.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <Link href="/marketplace">
+            <Button size="lg" className="rounded-full px-10 font-semibold shadow-2xl h-14">
+              Explore Marketplace
+              <ArrowRight size={18} />
+            </Button>
+          </Link>
+          <Link href="/dev">
+            <Button variant="ghost" size="lg" className="rounded-full px-10 font-semibold h-14 border border-zinc-800">
+              Build Agent
+            </Button>
+          </Link>
+        </div>
+
+        {/* Hero Image / Dashboard Preview Placeholder */}
+        <div className="pt-20">
+           <div className="relative group mx-auto max-w-5xl">
+              <div className="absolute inset-0 bg-blue-500/5 blur-[100px] rounded-full group-hover:bg-blue-500/10 transition-all duration-1000" />
+              <div className="relative rounded-[32px] border border-zinc-800 bg-zinc-900/20 aspect-video flex items-center justify-center overflow-hidden">
+                  <div className="grid grid-cols-3 gap-8 w-full px-12">
+                     {[1,2,3].map(i => (
+                        <div key={i} className="h-48 rounded-2xl bg-zinc-950/50 border border-zinc-800/50 animate-pulse" />
+                     ))}
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
+              </div>
+           </div>
         </div>
       </section>
 
-      {/* Feature Section: High Fidelity */}
-      <section className="py-32 px-8 md:px-24 relative">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-          <div className="space-y-10">
-            <div className="space-y-4">
-               <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white uppercase leading-none">
-                Hardened<br />
-                <span className="text-blue-500 italic">Infrastructure</span>
-              </h2>
-              <p className="text-xl text-zinc-500 font-medium leading-relaxed">
-                We combine AST-level security analysis with Linux Namespace isolation to ensure your agents run in a bulletproof environment.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {[
-                { icon: <ShieldCheck className="text-green-500" />, title: "Zero Trust", desc: "AST isolation for every run" },
-                { icon: <Cpu className="text-blue-500" />, title: "Native SVM", desc: "Direct Solana integration" },
-                { icon: <Layers className="text-purple-500" />, title: "M2M Bridge", desc: "Agents hire other agents" },
-                { icon: <History size={20} className="text-orange-500" />, title: "Provenance", desc: "On-chain execution history" }
-              ].map((f, i) => (
-                <div key={i} className="p-6 bg-zinc-900/40 border border-zinc-800 rounded-3xl space-y-4 hover:border-zinc-700 transition-colors">
-                  <div className="w-10 h-10 bg-zinc-950 rounded-xl flex items-center justify-center border border-zinc-800 shadow-inner">
-                    {f.icon}
-                  </div>
-                  <h3 className="font-black text-white uppercase tracking-tight">{f.title}</h3>
-                  <p className="text-xs text-zinc-500 font-medium">{f.desc}</p>
+      {/* Features Grid */}
+      <section className="py-32 px-8 md:px-16 max-w-7xl mx-auto w-full space-y-24">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {[
+              { icon: <ShieldCheck className="text-zinc-100" />, title: "Hardened Runtime", desc: "Every agent executes in a restricted Linux namespace with AST-level security." },
+              { icon: <Layers className="text-zinc-100" />, title: "Sequential Chaining", desc: "Chain agents into complex swarms where data flows trustlessly between nodes." },
+              { icon: <Database className="text-zinc-100" />, title: "Real-time Settlement", desc: "Instant micropayments via our built-in SVM wallet and escrow protocol." }
+            ].map((feature, i) => (
+              <div key={i} className="space-y-6 text-left group">
+                <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:border-zinc-500 transition-colors">
+                  {feature.icon}
                 </div>
-              ))}
-            </div>
-          </div>
+                <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">{feature.desc}</p>
+              </div>
+            ))}
+         </div>
 
-          <div className="relative group">
-            <div className="absolute inset-0 bg-blue-600/20 blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-            <div className="relative bg-zinc-950 border border-zinc-800 p-8 rounded-[48px] shadow-2xl overflow-hidden aspect-square flex items-center justify-center">
-               <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-purple-600/5" />
-               <div className="space-y-6 w-full max-w-sm relative z-10">
-                  <div className="p-4 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-2xl animate-in slide-in-from-bottom-10 duration-700 delay-100">
-                    <div className="flex items-center gap-3 mb-2">
-                       <div className="w-2 h-2 rounded-full bg-green-500" />
-                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Agent_Alpha: Executing</p>
-                    </div>
-                    <p className="text-xs font-mono text-blue-400">await shoujiki.hire_agent(&quot;beta&quot;)</p>
+         {/* Secondary Feature Section */}
+         <div className="rounded-[48px] bg-zinc-900/20 border border-zinc-800 p-12 md:p-20 flex flex-col md:flex-row gap-16 items-center">
+            <div className="flex-1 space-y-8 text-left">
+               <h2 className="text-4xl font-semibold tracking-tight text-white leading-tight">Built for the next generation of AI supply chains.</h2>
+               <p className="text-zinc-400 leading-relaxed font-medium">
+                  We provide the protocol layer that allows machines to hire other machines. Our M2M bridge and verifiable receipts create a portable identity for every autonomous node.
+               </p>
+               <div className="flex gap-4">
+                  <div className="flex items-center gap-2 text-sm text-zinc-100 font-medium">
+                     <CheckCircle2 size={16} className="text-green-500" />
+                     Low Latency
                   </div>
-
-                  <div className="p-4 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-2xl animate-in slide-in-from-bottom-10 duration-700 delay-300 ml-8 border-l-blue-500 border-l-2">
-                    <div className="flex items-center gap-3 mb-2">
-                       <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Agent_Beta: Initializing</p>
-                    </div>
-                    <p className="text-xs font-mono text-purple-400">Escrow Locked: 0.05 SOL</p>
-                  </div>
-
-                  <div className="p-4 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-2xl animate-in slide-in-from-bottom-10 duration-700 delay-500 border-green-500/20">
-                    <div className="flex items-center gap-3 mb-2">
-                       <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
-                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Workflow: Settled</p>
-                    </div>
-                    <p className="text-xs font-mono text-green-400">Receipt Hash: 0x7a...f2</p>
+                  <div className="flex items-center gap-2 text-sm text-zinc-100 font-medium">
+                     <CheckCircle2 size={16} className="text-green-500" />
+                     Scalable
                   </div>
                </div>
             </div>
-          </div>
-        </div>
+            <div className="w-full md:w-[40%] aspect-square bg-zinc-950 rounded-[40px] border border-zinc-800 flex items-center justify-center relative overflow-hidden">
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-500/10 blur-[60px] rounded-full" />
+               <Activity className="text-zinc-700 animate-pulse" size={64} />
+            </div>
+         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-40 px-8 md:px-24">
-        <div className="max-w-4xl mx-auto text-center space-y-12 relative">
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/5 blur-[120px] -z-10 rounded-full" />
-           <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-white uppercase leading-none">
-            Ready to scale<br />
-            your <span className="text-zinc-600 italic">intelligence?</span>
-          </h2>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-             <Link href="/marketplace">
-                <Button className="h-16 px-12 rounded-[24px] text-lg font-black tracking-tight bg-white text-zinc-950 hover:bg-zinc-200 transition-all hover:scale-105 active:scale-95">
-                  LAUNCH MARKETPLACE
-                </Button>
-             </Link>
-             <Link href="/docs">
-                <Button variant="ghost" className="h-16 px-12 rounded-[24px] text-lg font-black tracking-tight text-zinc-400 hover:text-white transition-all">
-                  READ THE DOCS
-                </Button>
-             </Link>
-          </div>
-        </div>
+      {/* Stats / Proof */}
+      <section className="py-20 border-y border-zinc-900 bg-zinc-900/5 px-8">
+         <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-12 text-center">
+            {[
+              { label: "Executions", val: "1.2M+" },
+              { label: "Network Finality", val: "0.4s" },
+              { label: "Active Agents", val: "500+" },
+              { label: "Protocol Volume", val: "10K+ SOL" }
+            ].map((stat, i) => (
+              <div key={i} className="space-y-1">
+                <p className="text-3xl font-semibold text-white tracking-tighter">{stat.val}</p>
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-widest">{stat.label}</p>
+              </div>
+            ))}
+         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-20 px-8 md:px-24 border-t border-zinc-900 bg-zinc-950 relative z-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 group">
-              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center transition-transform group-hover:rotate-12">
-                <Zap size={14} className="text-white" fill="currentColor" />
+      <footer className="py-24 px-8 md:px-16 border-t border-zinc-900 w-full mt-auto bg-[#050505]">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-16">
+          <div className="col-span-1 md:col-span-1 space-y-6">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center">
+                <Zap size={14} className="text-black" fill="currentColor" />
               </div>
-              <span className="text-xl font-black text-white tracking-tighter uppercase">
-                Shoujiki
-              </span>
+              <span className="text-base font-semibold tracking-tight">Shoujiki</span>
             </div>
-            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest ml-8 leading-none">Agent OS V3</p>
+            <p className="text-xs text-zinc-600 font-medium leading-relaxed uppercase tracking-tighter">The Agent Infrastructure Protocol.</p>
           </div>
-          
-          <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-500">
-            <a href="#" className="hover:text-blue-500 transition-colors">Documentation</a>
-            <a href="#" className="hover:text-blue-500 transition-colors">Security</a>
-            <a href="#" className="hover:text-blue-500 transition-colors">Governance</a>
-            <a href="#" className="hover:text-blue-500 transition-colors text-blue-400">Join Discord</a>
+          <div className="space-y-4">
+             <h4 className="text-xs font-semibold text-white uppercase tracking-widest">Protocol</h4>
+             <ul className="space-y-2 text-xs text-zinc-500 font-medium">
+                <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Governance</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Registry</a></li>
+             </ul>
           </div>
-
-          <div className="text-zinc-700 text-[10px] font-bold uppercase tracking-tighter">
-            © 2026 SHOUJIKI INFRASTRUCTURE. BUILT FOR THE MACHINE ECONOMY.
+          <div className="space-y-4">
+             <h4 className="text-xs font-semibold text-white uppercase tracking-widest">Network</h4>
+             <ul className="space-y-2 text-xs text-zinc-500 font-medium">
+                <li><a href="#" className="hover:text-white transition-colors">Explorer</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Validator</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Status</a></li>
+             </ul>
           </div>
+          <div className="space-y-4">
+             <h4 className="text-xs font-semibold text-white uppercase tracking-widest">Company</h4>
+             <ul className="space-y-2 text-xs text-zinc-500 font-medium">
+                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Twitter</a></li>
+             </ul>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto pt-20 border-t border-zinc-900 mt-20 flex flex-col md:flex-row justify-between gap-8 text-[10px] font-medium text-zinc-700 uppercase tracking-widest">
+           <p>© 2026 Shoujiki Labs. All rights reserved.</p>
+           <div className="flex gap-8">
+              <a href="#" className="hover:text-zinc-400">Terms</a>
+              <a href="#" className="hover:text-zinc-400">Privacy</a>
+              <a href="#" className="hover:text-zinc-400">Security</a>
+           </div>
         </div>
       </footer>
     </div>
   );
 }
-
-import { History } from 'lucide-react';

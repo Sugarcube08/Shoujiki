@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { getMyAgents, deleteAgent, withdrawAgentBalance } from '@/lib/api';
 import { AgentCard } from '@/components/agent/AgentCard';
-import { Loader2, Plus, AlertCircle, LayoutGrid, Terminal as TerminalIcon } from 'lucide-react';
+import { Loader2, Plus, LayoutGrid, Terminal as TerminalIcon, Shield, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
@@ -44,10 +44,9 @@ export default function MyAgentsPage() {
     try {
       await deleteAgent(id);
       setAgents(agents.filter((a: any) => a.id !== id));
-      setSuccess('Agent terminated successfully.');
+      setSuccess('Instance decommissioned.');
     } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.detail || 'Failed to delete agent');
+      setError('Operation failed');
     } finally {
       setDeletingId(null);
     }
@@ -56,12 +55,11 @@ export default function MyAgentsPage() {
   const handleWithdraw = async (id: string) => {
     setWithdrawingId(id);
     try {
-      const res = await withdrawAgentBalance(id);
-      setSuccess(`Withdrawal successful! TX: ${res.tx_signature.slice(0, 16)}...`);
-      fetchAgents(); // Refresh balances
+      await withdrawAgentBalance(id);
+      setSuccess(`Earnings transferred`);
+      fetchAgents();
     } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.detail || 'Failed to withdraw funds');
+      setError('Transfer failed');
     } finally {
       setWithdrawingId(null);
     }
@@ -69,44 +67,38 @@ export default function MyAgentsPage() {
 
   if (!connected) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 gap-8 bg-zinc-950 border border-zinc-900 rounded-[40px] shadow-2xl">
-        <div className="w-24 h-24 bg-zinc-900 rounded-3xl flex items-center justify-center border border-zinc-800 shadow-inner text-zinc-700">
-          <TerminalIcon size={48} />
+      <div className="flex flex-col items-center justify-center py-40 gap-6 animate-in fade-in duration-500">
+        <div className="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center text-zinc-600">
+          <Shield size={24} />
         </div>
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Terminal_Restricted</h2>
-          <p className="text-zinc-500 font-medium">Please connect your Solana wallet to access your agent fleet.</p>
+        <div className="text-center space-y-1">
+          <h2 className="text-lg font-semibold text-zinc-100 uppercase tracking-tight">Identity Required</h2>
+          <p className="text-zinc-500 text-sm">Link your wallet to manage your nodes.</p>
         </div>
+        <Button onClick={login} className="rounded-full px-8 h-11">Connect Wallet</Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-12 pb-20 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-zinc-900 pb-10">
-        <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
-            <LayoutGrid size={12} />
-            Command Center
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white uppercase leading-none">
-            Your <span className="text-zinc-500">Fleet</span>
-          </h1>
-          <p className="text-zinc-400 font-medium max-w-xl leading-relaxed">
-            Monitor, manage, and scale your autonomous agent collection. Track on-chain earnings and performance metrics.
+    <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700 pb-24 text-left">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-10 border-b border-zinc-900">
+        <div className="space-y-1.5">
+           <h1 className="text-3xl font-semibold text-zinc-100 tracking-tight">Fleet Overview</h1>
+           <p className="text-zinc-400 text-sm font-medium leading-relaxed">
+            Monitor telemetry and earnings for your deployed autonomous agents.
           </p>
         </div>
         
-        <Button onClick={() => router.push('/dev')} className="h-16 px-10 rounded-2xl bg-blue-600 border-t border-white/20 font-black tracking-tight gap-3 shadow-[0_0_30px_rgba(37,99,235,0.2)] hover:scale-105 active:scale-95 transition-all">
-          <Plus size={20} />
-          NEW_MISSION
+        <Button onClick={() => router.push('/dev')} className="rounded-xl h-11 px-6 text-xs font-bold uppercase tracking-widest gap-2">
+          <Plus size={16} /> Deploy Agent
         </Button>
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-40 gap-4">
-          <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin shadow-[0_0_20px_rgba(59,130,246,0.1)]" />
-          <p className="text-zinc-600 font-black uppercase tracking-[0.3em] text-[10px]">Syncing_Fleet_Data</p>
+          <Loader2 className="animate-spin text-zinc-700" size={24} />
+          <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest">Syncing Fleet State...</p>
         </div>
       ) : agents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -122,22 +114,22 @@ export default function MyAgentsPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-40 bg-zinc-900/10 rounded-[48px] border-2 border-dashed border-zinc-900 flex flex-col items-center gap-6 group">
-          <div className="w-20 h-20 bg-zinc-950 border border-zinc-900 rounded-3xl flex items-center justify-center text-zinc-800 transition-all duration-500 group-hover:border-blue-500/30 group-hover:text-blue-500/30 group-hover:scale-110">
-             <Plus size={40} />
+        <div className="py-32 rounded-[32px] border border-dashed border-zinc-900 flex flex-col items-center gap-6 group hover:bg-zinc-900/10 transition-colors">
+          <div className="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center text-zinc-700">
+             <Activity size={24} />
           </div>
-          <div className="space-y-1">
-            <p className="text-zinc-500 font-black uppercase tracking-widest text-sm">No Active Deployments</p>
-            <p className="text-zinc-600 text-xs font-medium">Your agent fleet is currently empty. Initialize a new mission.</p>
+          <div className="text-center space-y-1">
+            <p className="text-zinc-200 font-semibold uppercase tracking-tight">Fleet Offline</p>
+            <p className="text-zinc-600 text-xs max-w-xs mx-auto font-medium leading-relaxed uppercase tracking-tighter">No active nodes registered to this identity.</p>
           </div>
-          <Button variant="outline" onClick={() => router.push('/dev')} className="h-12 px-8 rounded-xl border-zinc-800 font-bold">
-            START_MISSION
+          <Button variant="outline" onClick={() => router.push('/dev')} className="h-10 px-8 rounded-lg font-bold text-[10px] uppercase tracking-widest border-zinc-800">
+            Initialize First Node
           </Button>
         </div>
       )}
 
-      {error && <Alert type="error" title="Command Failed" message={error} onClose={() => setError('')} />}
-      {success && <Alert type="success" title="Success" message={success} onClose={() => setSuccess('')} />}
+      {error && <Alert type="error" message={error} onClose={() => setError('')} />}
+      {success && <Alert type="success" message={success} onClose={() => setSuccess('')} />}
     </div>
   );
 }

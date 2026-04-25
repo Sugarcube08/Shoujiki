@@ -1,31 +1,26 @@
 import React from 'react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/utils';
 
 export const Card = ({ className, children }: { className?: string, children: React.ReactNode }) => (
-  <div className={cn('bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden', className)}>
+  <div className={cn('bg-zinc-900/40 border border-zinc-800/60 rounded-xl overflow-hidden shadow-sm backdrop-blur-sm', className)}>
     {children}
   </div>
 );
 
 export const CardHeader = ({ className, children }: { className?: string, children: React.ReactNode }) => (
-  <div className={cn('p-6 border-b border-zinc-800', className)}>
+  <div className={cn('px-6 py-5 flex flex-col gap-1.5', className)}>
     {children}
   </div>
 );
 
 export const CardContent = ({ className, children }: { className?: string, children: React.ReactNode }) => (
-  <div className={cn('p-6', className)}>
+  <div className={cn('px-6 pb-6 pt-0', className)}>
     {children}
   </div>
 );
 
 export const CardFooter = ({ className, children }: { className?: string, children: React.ReactNode }) => (
-  <div className={cn('p-6 bg-zinc-900/50 border-t border-zinc-800', className)}>
+  <div className={cn('px-6 py-4 border-t border-zinc-800/60 bg-zinc-900/20', className)}>
     {children}
   </div>
 );

@@ -9,20 +9,16 @@ import { useRouter } from 'next/navigation';
 import { 
   Code2, 
   Rocket, 
-  AlertCircle, 
-  FileJson, 
+  FileCode, 
   Plus, 
   Trash2, 
   Play, 
-  FileCode,
-  Package,
-  Layers,
   Terminal,
-  ChevronRight,
   Cpu,
-  ShieldCheck,
-  Activity,
-  Workflow
+  Layers,
+  ChevronRight,
+  MonitorPlay,
+  Save
 } from 'lucide-react';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
 import Editor from "@monaco-editor/react";
@@ -45,19 +41,15 @@ import json
 
 class Agent:
     def run(self, input_data):
-        print(f"Executing with input: {input_data}")
-        
-        # Example: Hiring another agent for sub-task
-        # result = shoujiki.hire_agent("summarizer", {"text": "Long content..."})
-        
+        # Neural logic here
         return {
             "status": "success",
-            "message": "Hello from Shoujiki Agent!",
-            "data_received": input_data
+            "message": "Protocol sequence initiated",
+            "data": input_data
         }
 
 agent = Agent()`,
-    'utils.py': '# Add helper functions here\ndef format_msg(msg):\n    return f"Processed: {msg}"'
+    'utils.py': '# Utilities library\ndef format_msg(msg):\n    return f"log: {msg}"'
   });
   
   const [selectedFile, setSelectedFile] = useState('main.py');
@@ -65,35 +57,16 @@ agent = Agent()`,
   const [newDep, setNewDep] = useState('');
   const [entrypoint, setEntrypoint] = useState('main.py');
   
-  const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   const handleAddFile = () => {
-    const filename = prompt('Enter filename (e.g. models.py):');
+    const filename = prompt('Enter filename:');
     if (filename && !files[filename]) {
-      setFiles({ ...files, [filename]: '# New file content' });
+      setFiles({ ...files, [filename]: '# Init' });
       setSelectedFile(filename);
-    }
-  };
-
-  const handleDeleteFile = (filename: string) => {
-    if (filename === entrypoint) return alert('Cannot delete entrypoint');
-    const newFiles = { ...files };
-    delete newFiles[filename];
-    setFiles(newFiles);
-    if (selectedFile === filename) setSelectedFile(entrypoint);
-  };
-
-  const handleAddDep = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && newDep.trim()) {
-      e.preventDefault();
-      if (!requirements.includes(newDep.trim())) {
-        setRequirements([...requirements, newDep.trim()]);
-      }
-      setNewDep('');
     }
   };
 
@@ -109,12 +82,12 @@ agent = Agent()`,
         files,
         requirements,
         entrypoint,
-        version: 'test-' + Date.now()
+        version: 'v' + Date.now()
       });
       setTestResult(res);
-      if (res.success) setSuccessMsg('Local simulation successful!');
+      if (res.success) setSuccessMsg('Simulation pass verified.');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Simulation failed');
+      setError(err.response?.data?.detail || 'Simulation aborted');
     } finally {
       setTesting(false);
     }
@@ -122,237 +95,119 @@ agent = Agent()`,
 
   const handleDeploy = () => {
     if (!isAuthenticated) return;
-    
     if (!metadata.id.trim() || !metadata.name.trim()) {
-      setError('Agent ID and Display Name are required');
+      setError('Missing metadata identifiers');
       return;
     }
-
-    const draft = {
-      ...metadata,
-      files,
-      requirements,
-      entrypoint,
-      version: 'v' + Date.now()
-    };
-    
+    const draft = { ...metadata, files, requirements, entrypoint, version: 'v' + Date.now() };
     localStorage.setItem('shoujiki_draft', JSON.stringify(draft));
     router.push('/deploy');
   };
 
   if (!connected) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 gap-8 bg-zinc-950 border border-zinc-900 rounded-[40px] shadow-2xl">
-        <div className="w-24 h-24 bg-zinc-900 rounded-3xl flex items-center justify-center border border-zinc-800 shadow-inner">
-          <AlertCircle size={48} className="text-zinc-700" />
+      <div className="flex flex-col items-center justify-center py-40 gap-8 animate-in fade-in duration-500">
+        <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-600">
+          <Terminal size={32} />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Terminal Locked</h2>
-          <p className="text-zinc-500 font-medium">Link your Solana wallet to access the Agent IDE.</p>
+          <h2 className="text-xl font-semibold text-zinc-100">Development Environment Restricted</h2>
+          <p className="text-zinc-500 text-sm max-w-xs mx-auto">Authorize your wallet to access the Agent SDK and cloud runtime.</p>
         </div>
+        <Button onClick={login} className="rounded-xl px-10 h-12 shadow-xl">Link Identity</Button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-10 pb-20">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-zinc-900 pb-10">
-        <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
-            <Code2 size={12} />
-            Developer Environment
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white uppercase">
-            Agent <span className="text-zinc-500 text-3xl">IDE</span>
-          </h1>
-          <p className="text-zinc-400 font-medium max-w-xl leading-relaxed">
-             Build, test, and deploy autonomous supply-chain agents. Use our secure bridge to hire other agents on-the-fly.
-          </p>
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-1000">
+      {/* Action Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-zinc-800/40">
+        <div className="space-y-1.5 text-left">
+           <h1 className="text-2xl font-bold text-zinc-100">Agent Studio</h1>
+           <p className="text-sm text-zinc-500 font-medium">Build and verify autonomous entities for the SVM network.</p>
         </div>
-        
-        <div className="flex items-center gap-4 w-full lg:w-auto">
-          <Button 
-            variant="outline" 
-            onClick={handleTest} 
-            isLoading={testing} 
-            className="flex-1 lg:flex-none h-14 rounded-2xl gap-3 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-sm font-black"
-          >
-            <Play size={18} className="fill-current" />
-            SIMULATE
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          <Button variant="outline" onClick={handleTest} isLoading={testing} className="flex-1 lg:flex-none h-11 px-6 rounded-xl text-xs font-semibold uppercase tracking-wider gap-2">
+            <MonitorPlay size={16} />
+            Simulate
           </Button>
-          <Button 
-            onClick={handleDeploy} 
-            isLoading={loading} 
-            className="flex-1 lg:flex-none h-14 px-10 rounded-2xl shadow-[0_0_30px_rgba(37,99,235,0.3)] bg-blue-600 border-t border-blue-400/30 text-sm font-black gap-3"
-          >
-            <Rocket size={18} />
-            LAUNCH PACKAGE
+          <Button onClick={handleDeploy} className="flex-1 lg:flex-none h-11 px-8 rounded-xl text-xs font-semibold uppercase tracking-wider gap-2 shadow-lg">
+            <Rocket size={16} />
+            Deploy to Fleet
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-        {/* Left Col: Config */}
-        <div className="xl:col-span-3 space-y-8">
-          <Card className="border-zinc-800 bg-zinc-950 overflow-visible">
-            <CardHeader className="border-b border-zinc-900 pb-6">
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2 text-zinc-400">
-                <Workflow size={16} className="text-blue-500" />
-                Blueprint
-              </h3>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              <Input 
-                label="Agent ID (Unique)" 
-                placeholder="e.g. data-analyzer-v1" 
-                value={metadata.id}
-                onChange={e => setMetadata({...metadata, id: e.target.value})}
-                className="bg-zinc-900/50 border-zinc-800 rounded-xl py-3 focus:border-blue-500"
-              />
-              <Input 
-                label="Public Display Name" 
-                placeholder="e.g. Sentinel AI" 
-                value={metadata.name}
-                onChange={e => setMetadata({...metadata, name: e.target.value})}
-                className="bg-zinc-900/50 border-zinc-800 rounded-xl py-3 focus:border-blue-500"
-              />
-              <div className="relative">
-                <Input 
-                  label="Runtime Price (SOL)" 
-                  type="number" 
-                  value={metadata.price}
-                  onChange={e => setMetadata({...metadata, price: parseFloat(e.target.value)})}
-                  className="bg-zinc-900/50 border-zinc-800 rounded-xl py-3 focus:border-blue-500"
-                />
-                <span className="absolute right-4 top-10 text-[10px] font-black text-blue-500 uppercase">Per Run</span>
-              </div>
-              <TextArea 
-                label="Description" 
-                placeholder="What does this agent do?"
-                value={metadata.description}
-                onChange={e => setMetadata({...metadata, description: e.target.value})}
-                className="bg-zinc-900/50 border-zinc-800 rounded-xl h-28 focus:border-blue-500"
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="border-zinc-800 bg-zinc-950">
-            <CardHeader className="border-b border-zinc-900 pb-6">
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2 text-zinc-400">
-                <Package size={16} className="text-purple-500" />
-                Environment
-              </h3>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              <div className="relative">
-                <Input 
-                  placeholder="Add pip package..." 
-                  value={newDep}
-                  onChange={e => setNewDep(e.target.value)}
-                  onKeyDown={handleAddDep}
-                  className="bg-zinc-900/50 border-zinc-800 rounded-xl py-3 pr-10"
-                />
-                <Plus size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600" />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {requirements.map(dep => (
-                  <span key={dep} className="bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-2 group transition-all hover:border-purple-500/40">
-                    {dep}
-                    <button onClick={() => setRequirements(requirements.filter(r => r !== dep))}>
-                      <Plus size={12} className="rotate-45 text-purple-500 group-hover:text-red-400 transition-colors" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <p className="text-[9px] text-zinc-600 font-medium px-1">Note: Standard AI libraries (OpenAI, Langchain, HTTPX) are pre-installed.</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Col: Editor & Console */}
-        <div className="xl:col-span-9 space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 h-[650px]">
-            {/* File Tree */}
-            <Card className="lg:col-span-1 border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col rounded-[24px]">
-              <CardHeader className="py-5 border-b border-zinc-900 flex flex-row items-center justify-between px-6 bg-zinc-900/30">
-                <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Source Tree</h4>
-                <button onClick={handleAddFile} className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-blue-500 transition-all">
-                  <Plus size={16} />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 h-[750px]">
+        {/* Workspace Panels */}
+        <div className="xl:col-span-3 space-y-6 flex flex-col h-full overflow-hidden">
+          <Card className="flex-1 flex flex-col overflow-hidden border-zinc-800/40 bg-[#09090b]">
+             <CardHeader className="py-4 px-6 flex flex-row items-center justify-between border-b border-zinc-800/40 bg-zinc-900/10">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Source_Explorer</span>
+                <button onClick={handleAddFile} className="p-1.5 hover:bg-zinc-800 rounded-md transition-colors text-zinc-400 hover:text-zinc-100">
+                   <Plus size={14} />
                 </button>
-              </CardHeader>
-              <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar">
+             </CardHeader>
+             <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
                 {Object.keys(files).map(filename => (
                   <div 
                     key={filename}
                     onClick={() => setSelectedFile(filename)}
-                    className={`flex items-center justify-between group px-4 py-3 rounded-xl cursor-pointer transition-all ${
+                    className={cn(
+                      "flex items-center justify-between px-4 py-2.5 rounded-lg cursor-pointer transition-all mb-1 group",
                       selectedFile === filename 
-                      ? 'bg-blue-600/10 border border-blue-500/20 text-blue-400' 
-                      : 'hover:bg-zinc-900 border border-transparent text-zinc-500 hover:text-zinc-300'
-                    }`}
+                      ? 'bg-zinc-800/60 text-zinc-100 border border-zinc-700/50' 
+                      : 'text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'
+                    )}
                   >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <FileCode size={16} className={selectedFile === filename ? 'text-blue-500' : 'text-zinc-600'} />
-                      <span className="text-xs font-black uppercase tracking-tight truncate">{filename}</span>
-                      {entrypoint === filename && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-                      )}
+                    <div className="flex items-center gap-2.5">
+                      <FileCode size={14} className={selectedFile === filename ? 'text-blue-500' : 'text-zinc-600'} />
+                      <span className="text-xs font-medium truncate">{filename}</span>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {entrypoint !== filename && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setEntrypoint(filename); }} 
-                          className="p-1 hover:text-blue-400 transition-colors"
-                          title="Set as Main Execution Point"
-                        >
-                          <Layers size={14} />
-                        </button>
-                      )}
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteFile(filename); }}
-                        className="p-1 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    {entrypoint === filename && (
+                       <div className="w-1 h-1 rounded-full bg-blue-500" />
+                    )}
                   </div>
                 ))}
-              </div>
-              <div className="p-4 bg-zinc-900/30 border-t border-zinc-900">
-                <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
-                     <Cpu size={14} className="text-blue-500" />
-                   </div>
-                   <div>
-                     <p className="text-[10px] font-black text-white leading-none">V3 Runtime</p>
-                     <p className="text-[9px] text-zinc-500 font-bold uppercase mt-1">Linux Namespace</p>
-                   </div>
-                </div>
-              </div>
-            </Card>
+             </div>
+          </Card>
 
-            {/* Code Editor */}
-            <Card className="lg:col-span-3 border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col rounded-[24px] shadow-2xl relative">
-              <div className="flex items-center justify-between px-8 py-4 border-b border-zinc-900 bg-zinc-900/40 backdrop-blur-md relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
-                  </div>
-                  <div className="h-4 w-px bg-zinc-800 mx-2" />
-                  <div className="flex items-center gap-3">
-                    <FileCode size={18} className="text-blue-400" />
-                    <span className="text-xs font-black font-mono text-zinc-300 uppercase tracking-widest">{selectedFile}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[9px] font-black bg-zinc-900 border border-zinc-800 text-zinc-500 px-3 py-1.5 rounded-full uppercase tracking-tighter">Python 3.11</span>
-                  {entrypoint === selectedFile && (
-                    <span className="text-[9px] font-black bg-blue-500/10 border border-blue-500/20 text-blue-400 px-3 py-1.5 rounded-full uppercase tracking-tighter shadow-[0_0_10px_rgba(59,130,246,0.1)]">Main Entrypoint</span>
-                  )}
-                </div>
+          <Card className="border-zinc-800/40 bg-[#09090b]">
+             <CardHeader className="py-4 px-6 border-b border-zinc-800/40 bg-zinc-900/10">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Registry_Metadata</span>
+             </CardHeader>
+             <CardContent className="p-5 space-y-4">
+                <Input 
+                  label="Agent Unique ID" 
+                  value={metadata.id}
+                  onChange={e => setMetadata({...metadata, id: e.target.value})}
+                  className="h-9 text-xs"
+                />
+                <Input 
+                  label="Display Name" 
+                  value={metadata.name}
+                  onChange={e => setMetadata({...metadata, name: e.target.value})}
+                  className="h-9 text-xs"
+                />
+             </CardContent>
+          </Card>
+        </div>
+
+        {/* Editor Zone */}
+        <div className="xl:col-span-9 flex flex-col gap-6 h-full overflow-hidden">
+           <Card className="flex-1 flex flex-col border-zinc-800/40 bg-[#09090b] overflow-hidden rounded-[24px]">
+              <div className="px-8 py-3 border-b border-zinc-800/40 flex items-center justify-between bg-zinc-900/10 backdrop-blur-sm">
+                 <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <span className="text-xs font-semibold text-zinc-300">{selectedFile}</span>
+                 </div>
+                 <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-medium text-zinc-500 tracking-wider">Python_3.11</span>
+                    {entrypoint === selectedFile && (
+                       <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[9px] font-black uppercase rounded border border-blue-500/20">Entry_Point</span>
+                    )}
+                 </div>
               </div>
               <div className="flex-1 relative">
                 <Editor
@@ -364,81 +219,44 @@ agent = Agent()`,
                   options={{
                     minimap: { enabled: false },
                     fontSize: 14,
-                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                     lineNumbers: 'on',
                     roundedSelection: true,
                     scrollBeyondLastLine: false,
                     readOnly: false,
                     automaticLayout: true,
-                    padding: { top: 30, bottom: 20 },
-                    scrollbar: {
-                      vertical: 'hidden',
-                      horizontal: 'hidden'
-                    },
-                    cursorStyle: 'block',
-                    cursorBlinking: 'smooth',
+                    padding: { top: 20 },
+                    backgroundColor: '#09090b'
                   }}
                 />
               </div>
-            </Card>
-          </div>
+           </Card>
 
-          {/* Test Console */}
-          {(testResult || error) && (
-            <Card className="bg-black/40 border-zinc-800 overflow-hidden rounded-[24px]">
-              <CardHeader className="py-4 border-b border-zinc-900 flex flex-row items-center justify-between px-8 bg-zinc-950/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Simulation_Output</h3>
+           {/* Console */}
+           {(testResult || error) && (
+             <Card className="h-64 border-zinc-800/40 bg-[#0c0c0e] overflow-hidden rounded-[24px] flex flex-col">
+                <CardHeader className="py-3 px-8 border-b border-zinc-800/40 flex flex-row items-center justify-between">
+                   <div className="flex items-center gap-2">
+                      <Terminal size={14} className="text-zinc-500" />
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Simulator_Output</span>
+                   </div>
+                   {testResult?.success && <span className="text-[9px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <CheckCircle2 size={12} /> Integrity Pass
+                   </span>}
+                </CardHeader>
+                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar font-mono text-[11px] leading-relaxed">
+                   {error ? (
+                     <p className="text-red-400">Simulation_Fault: {error}</p>
+                   ) : (
+                     <pre className="text-zinc-400">{JSON.stringify(testResult, null, 2)}</pre>
+                   )}
                 </div>
-                {testResult?.success && (
-                  <div className="flex items-center gap-2 text-green-400 text-[10px] font-black uppercase">
-                    <ShieldCheck size={14} />
-                    Integrity Verified
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent className="p-0">
-                {error && (
-                  <div className="p-6 bg-red-500/5 border-b border-red-500/10 text-red-500 text-xs font-mono flex gap-3 items-start">
-                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-black uppercase mb-1">Execution Error:</p>
-                      {error}
-                    </div>
-                  </div>
-                )}
-                {testResult && (
-                  <div className="p-8">
-                    <pre className="text-sm font-mono text-zinc-400 overflow-auto max-h-80 custom-scrollbar leading-relaxed">
-                      <div className="text-zinc-600 mb-4 font-bold border-b border-zinc-900 pb-2">--- START OF EXECUTION RECEIPT ---</div>
-                      {JSON.stringify(testResult, null, 2)}
-                      <div className="text-zinc-600 mt-4 font-bold border-t border-zinc-900 pt-2">--- END OF EXECUTION RECEIPT ---</div>
-                    </pre>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+             </Card>
+           )}
         </div>
       </div>
 
-      {successMsg && (
-        <Alert 
-          type="success" 
-          title="Verification Passed" 
-          message={successMsg} 
-          onClose={() => setSuccessMsg('')} 
-        />
-      )}
-      {error && (
-        <Alert 
-          type="error" 
-          title="System Warning" 
-          message={error} 
-          onClose={() => setError('')} 
-        />
-      )}
+      {successMsg && <Alert type="success" message={successMsg} onClose={() => setSuccessMsg('')} />}
+      {error && <Alert type="error" message={error} onClose={() => setError('')} />}
     </div>
   );
 }
