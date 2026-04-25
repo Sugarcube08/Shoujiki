@@ -7,24 +7,7 @@ import { Button } from '@/components/ui/Button';
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col bg-[#050505] min-h-screen text-zinc-100 font-sans">
-      {/* Navbar Minimal */}
-      <nav className="h-20 flex items-center justify-between px-8 md:px-16 border-b border-zinc-900/50 sticky top-0 bg-[#050505]/80 backdrop-blur-md z-50">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-            <Zap size={18} className="text-black" fill="currentColor" />
-          </div>
-          <span className="text-lg font-semibold tracking-tight">Shoujiki</span>
-        </div>
-        <div className="flex items-center gap-8">
-           <Link href="/marketplace" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Marketplace</Link>
-           <Link href="/dev" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Developer</Link>
-           <Link href="/my-agents">
-              <Button size="sm" className="rounded-full px-6">Launch App</Button>
-           </Link>
-        </div>
-      </nav>
-
+    <div className="animate-in fade-in duration-1000">
       {/* Hero */}
       <section className="pt-32 pb-20 px-8 md:px-16 max-w-7xl mx-auto text-center space-y-12">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-medium text-zinc-400 uppercase tracking-widest">
@@ -58,7 +41,7 @@ export default function LandingPage() {
         <div className="pt-20">
            <div className="relative group mx-auto max-w-5xl">
               <div className="absolute inset-0 bg-blue-500/5 blur-[100px] rounded-full group-hover:bg-blue-500/10 transition-all duration-1000" />
-              <div className="relative rounded-[32px] border border-zinc-800 bg-zinc-900/20 aspect-video flex items-center justify-center overflow-hidden">
+              <div className="relative rounded-[32px] border border-zinc-800 bg-zinc-900/20 aspect-video flex items-center justify-center overflow-hidden shadow-2xl">
                   <div className="grid grid-cols-3 gap-8 w-full px-12">
                      {[1,2,3].map(i => (
                         <div key={i} className="h-48 rounded-2xl bg-zinc-950/50 border border-zinc-800/50 animate-pulse" />
@@ -129,53 +112,6 @@ export default function LandingPage() {
             ))}
          </div>
       </section>
-
-      {/* Footer */}
-      <footer className="py-24 px-8 md:px-16 border-t border-zinc-900 w-full mt-auto bg-[#050505]">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-16">
-          <div className="col-span-1 md:col-span-1 space-y-6">
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center">
-                <Zap size={14} className="text-black" fill="currentColor" />
-              </div>
-              <span className="text-base font-semibold tracking-tight">Shoujiki</span>
-            </div>
-            <p className="text-xs text-zinc-600 font-medium leading-relaxed uppercase tracking-tighter">The Agent Infrastructure Protocol.</p>
-          </div>
-          <div className="space-y-4">
-             <h4 className="text-xs font-semibold text-white uppercase tracking-widest">Protocol</h4>
-             <ul className="space-y-2 text-xs text-zinc-500 font-medium">
-                <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Governance</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Registry</a></li>
-             </ul>
-          </div>
-          <div className="space-y-4">
-             <h4 className="text-xs font-semibold text-white uppercase tracking-widest">Network</h4>
-             <ul className="space-y-2 text-xs text-zinc-500 font-medium">
-                <li><a href="#" className="hover:text-white transition-colors">Explorer</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Validator</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Status</a></li>
-             </ul>
-          </div>
-          <div className="space-y-4">
-             <h4 className="text-xs font-semibold text-white uppercase tracking-widest">Company</h4>
-             <ul className="space-y-2 text-xs text-zinc-500 font-medium">
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Twitter</a></li>
-             </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto pt-20 border-t border-zinc-900 mt-20 flex flex-col md:flex-row justify-between gap-8 text-[10px] font-medium text-zinc-700 uppercase tracking-widest">
-           <p>© 2026 Shoujiki Labs. All rights reserved.</p>
-           <div className="flex gap-8">
-              <a href="#" className="hover:text-zinc-400">Terms</a>
-              <a href="#" className="hover:text-zinc-400">Privacy</a>
-              <a href="#" className="hover:text-zinc-400">Security</a>
-           </div>
-        </div>
-      </footer>
     </div>
   );
 }

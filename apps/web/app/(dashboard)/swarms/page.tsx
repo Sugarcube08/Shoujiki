@@ -91,14 +91,22 @@ export default function SwarmsPage() {
     }
   };
 
+  const [runningId, setRunningId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
   const handleRun = async (workflowId: string) => {
+    setRunningId(workflowId);
+    setError('');
     try {
       await axios.post(`${API_URL}/workflows/${workflowId}/run`, { initial_input: { start: true } }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('shoujiki_token')}` }
       });
       await fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.response?.data?.detail || 'Failed to start swarm. Ensure you have sufficient balance.');
+    } finally {
+      setRunningId(null);
     }
   };
 
@@ -110,7 +118,7 @@ export default function SwarmsPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700 pb-24 text-left">
+    <div className="space-y-12 animate-in fade-in duration-700 pb-24 text-left">
       <div className="space-y-2 border-b border-zinc-900 pb-10">
         <h1 className="text-3xl font-semibold text-white tracking-tight">Neural Swarms</h1>
         <p className="text-zinc-400 text-sm font-medium">Chain multiple agents into autonomous multi-step pipelines.</p>
@@ -203,7 +211,11 @@ export default function SwarmsPage() {
                                 </React.Fragment>
                              ))}
                           </div>
-                          <Button variant="secondary" size="sm" className="w-full rounded-lg text-[10px] font-black tracking-widest uppercase h-9" onClick={() => handleRun(wf.id)}>
+                          <Button variant="secondary" size="sm" className="w-full rounded-lg text-[10px] font-black tracking-widest uppercase h-9" 
+                             onClick={() => handleRun(wf.id)}
+                             isLoading={runningId === wf.id}
+                             disabled={!!runningId}
+                          >
                              Execute Swarm
                           </Button>
                        </CardContent>
@@ -254,6 +266,7 @@ export default function SwarmsPage() {
            </div>
         </div>
       </div>
+      {error && <Alert type="error" message={error} onClose={() => setError('')} />}
     </div>
   );
 }

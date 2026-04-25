@@ -122,7 +122,7 @@ agent = Agent()`,
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-1000">
+    <div className="space-y-8 animate-in fade-in duration-1000">
       {/* Action Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-zinc-800/40">
         <div className="space-y-1.5 text-left">

@@ -81,7 +81,7 @@ export default function MyAgentsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700 pb-24 text-left">
+    <div className="space-y-12 animate-in fade-in duration-700 pb-24 text-left">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-10 border-b border-zinc-900">
         <div className="space-y-1.5">
            <h1 className="text-3xl font-semibold text-zinc-100 tracking-tight">Fleet Overview</h1>

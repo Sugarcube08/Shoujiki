@@ -126,7 +126,7 @@ export default function AgentRunPage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500">
+    <div className="space-y-12 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-100 transition-colors text-xs font-medium">
           <ArrowLeft size={14} /> Back

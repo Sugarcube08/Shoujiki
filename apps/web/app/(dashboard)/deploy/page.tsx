@@ -73,7 +73,7 @@ export default function DeploySpacePage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500 pb-24 text-left">
+    <div className="space-y-12 animate-in fade-in duration-500 pb-24 text-left">
       <div className="flex items-center justify-between">
         <button 
           onClick={() => router.push('/dev')}

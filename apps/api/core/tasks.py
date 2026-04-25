@@ -7,6 +7,7 @@ import json
 import hashlib
 from backend.modules.sandbox.client import execute_in_sandbox
 from backend.db.session import AsyncSessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.modules.agents import service as agent_service
 from backend.modules.billing import service as billing_service
 from backend.db.models.models import Task, Workflow, WorkflowRun, Agent

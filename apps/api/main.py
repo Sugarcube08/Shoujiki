@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import engine, Base, get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlalchemy import text, select
 from backend.modules.auth.routes import router as auth_router
 from backend.modules.agents.routes import router as agents_router
 from backend.modules.billing.routes import router as billing_router
@@ -15,6 +15,7 @@ from arq.connections import RedisSettings
 import os
 import logging
 import json
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
