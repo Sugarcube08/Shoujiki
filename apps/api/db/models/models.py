@@ -36,6 +36,7 @@ class Task(Base):
     input_data = Column(Text, nullable=False)
     result = Column(Text, nullable=True)
     status = Column(String, default="pending") # pending, running, completed, failed
+    depth = Column(Float, default=0) # Track M2M recursion depth
     execution_receipt = Column(JSON, nullable=True) # Verifiable receipt data
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

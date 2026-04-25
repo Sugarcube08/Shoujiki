@@ -17,11 +17,15 @@ logger = logging.getLogger(__name__)
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
-async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, creator_wallet: str, price: float):
+async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, creator_wallet: str, price: float, depth: int = 0):
     """
     Background worker task to execute agent in sandbox and settle payment.
     """
-    logger.info(f"Worker: Starting task {task_id} for agent {agent_id}")
+    if depth > 3:
+        logger.error(f"Worker: Task {task_id} exceeded recursion depth {depth}. Aborting.")
+        return
+
+    logger.info(f"Worker: Starting task {task_id} for agent {agent_id} (depth: {depth})")
     redis = ctx['redis']
     
     # 1. Update status to 'running'
@@ -81,7 +85,11 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
             agent.total_runs += 1
             if exec_result["success"]:
                 agent.successful_runs += 1
-                agent.reputation_score += 1.0 # Reward success
+                
+                # Price-weighted reputation gain (min 0.1, proportional to price)
+                # Helps prevent Sybil/farming with very cheap tasks
+                gain = max(0.1, price * 100.0) 
+                agent.reputation_score += min(5.0, gain) # Cap gain per run
                 
                 # Dynamic Trust Leveling
                 if agent.successful_runs >= 50:
@@ -89,7 +97,7 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
                 elif agent.successful_runs >= 10:
                     agent.trust_level = "trusted"
             else:
-                agent.reputation_score -= 5.0 # Penalize failure
+                agent.reputation_score -= 10.0 # Heavier penalty for failure
             
             # Ensure boundaries
             agent.reputation_score = max(0.0, min(200.0, agent.reputation_score))
@@ -98,7 +106,47 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
             await db.commit()
             await redis.publish(f"task:{task_id}", json.dumps({"status": status, "result": result}))
             
-            # 5. Settle payment (On-chain Escrow)
+            # 5. Handle M2M Hire Requests (Machine-to-Machine Bridge)
+            from backend.modules.billing.service import PLATFORM_WALLET
+            hire_requests = exec_result.get("hire_requests", [])
+            for hire in hire_requests:
+                hired_agent_id = hire.get("agent_id")
+                hired_input = hire.get("input_data")
+                logger.info(f"Worker: Agent {agent_id} is hiring agent {hired_agent_id}!")
+                
+                # For the demo, we auto-generate a nested task ID
+                new_task_id = f"m2m_{task_id[:8]}_{hired_agent_id[:8]}"
+                
+                async with AsyncSessionLocal() as db_m2m:
+                    hired_agent_res = await db_m2m.execute(select(Agent).where(Agent.id == hired_agent_id))
+                    hired_agent = hired_agent_res.scalars().first()
+                    
+                    if hired_agent:
+                        # Create the M2M task
+                        new_task = Task(
+                            id=new_task_id,
+                            agent_id=hired_agent_id,
+                            user_wallet=PLATFORM_WALLET, # Platform pays for M2M demo
+                            input_data=hired_input,
+                            status="pending",
+                            depth=depth + 1
+                        )
+                        db_m2m.add(new_task)
+                        await db_m2m.commit()
+                        
+                        # Queue the next task in the chain
+                        await ctx['redis'].enqueue_job(
+                            'run_agent_task',
+                            task_id=new_task_id,
+                            agent_id=hired_agent_id,
+                            input_data=hired_input,
+                            creator_wallet=hired_agent.creator_wallet,
+                            price=hired_agent.price,
+                            depth=depth + 1
+                        )
+                        logger.info(f"Worker: M2M task {new_task_id} queued for execution (new depth: {depth + 1})")
+
+            # 6. Settle payment (On-chain Escrow)
             # The task has the user_wallet, and agent has the creator_wallet
             db_task_res = await db.execute(select(Task).where(Task.id == task_id))
             db_task = db_task_res.scalars().first()

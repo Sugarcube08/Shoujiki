@@ -37,19 +37,27 @@ pub mod shoujiki_escrow {
 
     pub fn release_funds(ctx: Context<SettleEscrow>, success: bool, receipt_hash: [u8; 32]) -> Result<()> {
         let escrow = &mut ctx.accounts.escrow;
-        require!(escrow.status == EscrowStatus::Locked, EscrowError::AlreadySettled);
+        // In Anchor, with the 'close' constraint, the account lamports 
+        // will be transferred to the destination at the end of the instruction.
+        // We just need to handle the escrowed 'amount' transfer here.
 
         escrow.receipt_hash = Some(receipt_hash);
 
         if success {
-            // Transfer from Escrow PDA to Agent Creator
-            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= escrow.amount;
-            **ctx.accounts.agent_creator.to_account_info().try_borrow_mut_lamports()? += escrow.amount;
+            // Transfer escrowed amount from Escrow PDA to Agent Creator
+            let escrow_info = ctx.accounts.escrow.to_account_info();
+            let creator_info = ctx.accounts.agent_creator.to_account_info();
+            
+            **escrow_info.try_borrow_mut_lamports()? -= escrow.amount;
+            **creator_info.try_borrow_mut_lamports()? += escrow.amount;
             escrow.status = EscrowStatus::Released;
         } else {
-            // Refund to User
-            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= escrow.amount;
-            **ctx.accounts.user.to_account_info().try_borrow_mut_lamports()? += escrow.amount;
+            // Refund escrowed amount to User
+            let escrow_info = ctx.accounts.escrow.to_account_info();
+            let user_info = ctx.accounts.user.to_account_info();
+
+            **escrow_info.try_borrow_mut_lamports()? -= escrow.amount;
+            **user_info.try_borrow_mut_lamports()? += escrow.amount;
             escrow.status = EscrowStatus::Refunded;
         }
 
@@ -82,7 +90,8 @@ pub struct SettleEscrow<'info> {
         seeds = [b"escrow", escrow.task_id.as_bytes()],
         bump,
         has_one = agent_creator,
-        has_one = user
+        has_one = user,
+        close = user // Returns rent-exempt lamports to the original user
     )]
     pub escrow: Account<'info, EscrowAccount>,
     #[account(mut)]

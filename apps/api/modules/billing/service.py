@@ -30,14 +30,21 @@ async def verify_solana_payment(tx_signature: str, expected_amount_sol: float, s
         try:
             logger.info(f"Strictly verifying payment signature: {tx_signature}")
             
-            # 1. Fetch transaction details
-            tx_resp = await client.get_transaction(
-                tx_signature, 
-                encoding="jsonParsed", 
-                max_supported_transaction_version=0
-            )
-            if not tx_resp.value:
-                return False, "Transaction not found on-chain"
+            # Retry loop for slow RPC/Finalization
+            tx_resp = None
+            for i in range(5):
+                tx_resp = await client.get_transaction(
+                    tx_signature, 
+                    encoding="jsonParsed", 
+                    max_supported_transaction_version=0
+                )
+                if tx_resp.value:
+                    break
+                logger.info(f"Tx {tx_signature} not found yet, retrying {i+1}/5...")
+                await asyncio.sleep(2)
+
+            if not tx_resp or not tx_resp.value:
+                return False, "Transaction not found on-chain (timeout)"
             
             tx = tx_resp.value.transaction
             # 2. Verify sender (first account is usually fee payer/sender)

@@ -5,19 +5,18 @@ import json
 import resource
 
 def set_limits():
-    # Limit memory to 128MB
-    mem_limit = 128 * 1024 * 1024
+    # Limit memory to 256MB
+    mem_limit = 256 * 1024 * 1024
     resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
-    # Limit CPU time to 5 seconds
-    resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
-    # Limit file size to 1MB
-    resource.setrlimit(resource.RLIMIT_FSIZE, (1024 * 1024, 1024 * 1024))
-    # Limit number of processes to 10
-    resource.setrlimit(resource.RLIMIT_NPROC, (10, 10))
+    # Limit CPU time to 10 seconds
+    resource.setrlimit(resource.RLIMIT_CPU, (10, 10))
+    # Limit file size to 2MB
+    resource.setrlimit(resource.RLIMIT_FSIZE, (2 * 1024 * 1024, 2 * 1024 * 1024))
+    # Limit number of processes to 20
+    resource.setrlimit(resource.RLIMIT_NPROC, (20, 20))
 
 def run_agent_code(files: dict, requirements: list, entrypoint: str, input_data: str):
     # Dynamic dependency installation is disabled for security. 
-    # We use the pre-installed packages in the container.
     if requirements:
         print(f"Note: Ignoring dynamic requirements {requirements}. Using pre-installed environment.")
 
@@ -56,10 +55,7 @@ class Shoujiki:
         with open('hire_request.json', 'w') as f:
             f.write(json.dumps(request))
         
-        # The runner would ideally fulfill this, but for the demo 
-        # we'll simulate the capability or provide a result file.
-        print(f"SHOUJIKI_BRIDGE: Requested hire of {agent_id}")
-        return {"status": "requested", "note": "Machine-to-machine demo active"}
+        return {"status": "requested", "note": "Machine-to-machine loop initiated"}
 
 shoujiki = Shoujiki()
 """
@@ -73,8 +69,7 @@ import sys
 import os
 import importlib
 
-# Add deps and current dir to path
-sys.path.insert(0, os.path.abspath(".deps"))
+# Add current dir to path
 sys.path.insert(0, os.path.abspath("."))
 
 try:
@@ -114,24 +109,39 @@ except Exception as e:
             f.write(wrapper_code)
 
         try:
-            # Try isolated execution
-            command = ["unshare", "-rn", "python3", "wrapper.py"]
+            # 5. Execute in HARDENED sandbox using bubblewrap
+            # This provides true filesystem isolation, network unsharing, and more.
+            command = [
+                "bwrap",
+                "--ro-bind", "/usr", "/usr",
+                "--symlink", "usr/bin", "/bin",
+                "--symlink", "usr/lib", "/lib",
+                "--symlink", "usr/lib64", "/lib64",
+                "--symlink", "usr/sbin", "/sbin",
+                "--dir", "/tmp",
+                "--proc", "/proc",
+                "--dev", "/dev",
+                "--unshare-all", # Isolates network, IPC, PID, UTS, user, etc.
+                "--hostname", "shoujiki-sandbox",
+                "--bind", tmpdir, "/app", # Map agent dir to /app
+                "--chdir", "/app",
+                "python3", "wrapper.py"
+            ]
+
             process = subprocess.run(
                 command,
-                cwd=tmpdir,
                 capture_output=True,
                 text=True,
-                timeout=20,
+                timeout=15,
                 preexec_fn=set_limits
             )
             
-            # If unshare itself failed (e.g. permission denied or kernel config)
-            # We must FAIL CLOSED. No insecure fallback.
-            if process.returncode != 0 and ("unshare failed" in process.stderr or "Operation not permitted" in process.stderr):
-                error_msg = f"Security Error: Isolation namespace failed to initialize. Aborting execution for safety. Details: {process.stderr}"
-                return False, "", error_msg
+            # 6. FAIL CLOSED: If isolation fails, we must not proceed.
+            if process.returncode != 0 and ("bwrap" in process.stderr or "Operation not permitted" in process.stderr):
+                error_msg = f"Security Error: Sandbox isolation failed. Aborting. {process.stderr}"
+                return False, "", error_msg, []
             
-            MAX_OUTPUT_SIZE = 50000
+            MAX_OUTPUT_SIZE = 100000
             stdout = process.stdout[:MAX_OUTPUT_SIZE]
             stderr = process.stderr[:MAX_OUTPUT_SIZE]
             
@@ -141,8 +151,20 @@ except Exception as e:
                 if len(parts) > 1 and "---RESULT_END---" in parts[1]:
                     result = parts[1].split("---RESULT_END---")[0].strip()
             
-            return process.returncode == 0, result, stderr
+            # 7. Check for M2M hire requests
+            hire_requests = []
+            hire_req_path = os.path.join(tmpdir, "hire_request.json")
+            if os.path.exists(hire_req_path):
+                try:
+                    with open(hire_req_path, 'r') as f:
+                        data = json.load(f)
+                        if isinstance(data, dict):
+                            hire_requests.append(data)
+                except:
+                    pass
+
+            return process.returncode == 0, result, stderr, hire_requests
         except subprocess.TimeoutExpired:
-            return False, "", "Execution timed out"
+            return False, "", "Execution timed out", []
         except Exception as e:
-            return False, "", str(e)
+            return False, "", str(e), []
