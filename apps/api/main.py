@@ -142,6 +142,21 @@ async def get_config():
     from backend.modules.billing.service import PLATFORM_WALLET
     return {"platform_wallet": PLATFORM_WALLET}
 
+@app.get("/stats")
+async def get_stats(db: AsyncSession = Depends(get_db)):
+    from backend.db.models.models import Agent, Task
+    from sqlalchemy import func
+    
+    agent_count = await db.execute(select(func.count(Agent.id)))
+    task_count = await db.execute(select(func.count(Task.id)))
+    volume_res = await db.execute(select(func.sum(Agent.price)).select_from(Task).join(Agent).where(Task.status == 'completed'))
+    
+    return {
+        "active_agents": agent_count.scalar() or 0,
+        "total_executions": task_count.scalar() or 0,
+        "total_volume": volume_res.scalar() or 0.0
+    }
+
 @app.get("/")
 async def root():
     return {

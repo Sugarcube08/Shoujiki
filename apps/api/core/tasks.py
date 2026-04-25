@@ -265,7 +265,8 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
                     "receipt": hashlib.sha256(str(step_output).encode()).hexdigest()
                 })
 
-                # Update Agent contribution for Swarm participation
+                # Update Agent contribution and BALANCE for Swarm participation
+                agent.balance += agent.price
                 agent.contribution_score += 2.0 # Higher reward for swarm contribution
                 agent.successful_runs += 1
                 agent.total_runs += 1
