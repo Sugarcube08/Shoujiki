@@ -49,13 +49,13 @@ export const AgentCard = ({ agent, onDelete, isDeleting, onWithdraw, isWithdrawi
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-             <div className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border", getTrustColor(agent.trust_level))}>
+             <div className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border shadow-sm", getTrustColor(agent.trust_level))}>
                 <Shield size={10} />
-                {agent.trust_level || "Verified"}
+                Passport: {agent.trust_level || "Verified"}
              </div>
-             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border border-zinc-800/60 bg-zinc-900/40 text-zinc-400">
+             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border border-zinc-800/60 bg-zinc-900/40 text-zinc-400 shadow-sm">
                 <Activity size={10} />
-                Rep: {agent.reputation_score?.toFixed(0) || "100"}
+                Rel: {(agent.reliability_score || 1.0).toLocaleString(undefined, {style: 'percent'})}
              </div>
           </div>
         </div>
@@ -70,38 +70,38 @@ export const AgentCard = ({ agent, onDelete, isDeleting, onWithdraw, isWithdrawi
           {agent.description || "Autonomous agent specialized in high-frequency execution and on-chain coordination."}
         </p>
         
-        <div className="pt-2 flex items-center justify-between text-[10px] text-zinc-500">
-          <span className="font-medium">Creator: <span className="text-zinc-300">{truncateWallet(agent.creator_wallet)}</span></span>
+        <div className="pt-2 flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-zinc-600">
+          <span>Creator: <span className="text-zinc-400 font-mono">{truncateWallet(agent.creator_wallet)}</span></span>
           {agent.balance !== undefined && agent.balance > 0 && (
-            <div className="flex items-center gap-1.5 text-zinc-300 font-medium">
-              <Wallet size={12} className="text-zinc-500" />
-              {agent.balance.toFixed(2)} SOL
+            <div className="flex items-center gap-1.5 text-blue-400">
+              <Wallet size={10} className="text-blue-500/50" />
+              Treasury: {agent.balance.toFixed(2)} SOL
             </div>
           )}
         </div>
       </CardContent>
 
-      <CardFooter className="flex flex-col gap-3">
+      <CardFooter className="flex flex-col gap-3 pt-2">
         <div className="flex gap-2 w-full">
           <Link href={`/agent/${agent.id}`} className="flex-1">
             <Button 
               variant="primary"
-              className="w-full h-10 text-xs font-semibold rounded-lg"
+              className="w-full h-10 text-[11px] font-black uppercase tracking-widest rounded-lg shadow-lg"
             >
-              Execute
-              <ArrowUpRight size={14} className="ml-1" />
+              Initialize Node
+              <ArrowUpRight size={14} className="ml-1 opacity-50" />
             </Button>
           </Link>
 
           {onWithdraw && agent.balance !== undefined && agent.balance > 0 && (
             <Button
-              variant="outline"
-              className="w-10 h-10 p-0 rounded-lg shrink-0"
+              variant="secondary"
+              className="w-10 h-10 p-0 rounded-lg shrink-0 border-zinc-800 bg-zinc-900/50"
               onClick={onWithdraw}
               isLoading={isWithdrawing}
-              title="Withdraw Balance"
+              title="Agent Treasury"
             >
-              <CreditCard size={16} />
+              <CreditCard size={16} className="text-zinc-400" />
             </Button>
           )}
         </div>

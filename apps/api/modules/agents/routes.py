@@ -30,18 +30,7 @@ async def run_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     
-    # 2. Check internal balance
-    from backend.db.models.models import UserWallet
-    wallet_res = await db.execute(select(UserWallet).where(UserWallet.wallet_address == current_user))
-    wallet = wallet_res.scalars().first()
-    
-    if not wallet or wallet.balance < agent.price:
-        raise HTTPException(status_code=402, detail=f"Insufficient in-app balance. Required: {agent.price} SOL")
-
-    # 3. Deduct from in-app wallet immediately (Escrowed)
-    wallet.balance -= agent.price
-    
-    # 4. Create task record (using task_id from frontend)
+    # 2. Create task record (using task_id from frontend)
     db_task = Task(
         id=req.task_id,
         agent_id=agent.id,
@@ -52,8 +41,8 @@ async def run_agent(
     db.add(db_task)
     await db.commit()
 
-    # 5. Enqueue in background worker
-    redis = request.app.state.redis
+    # 3. Enqueue in background worker
+    redis = request.app.state.redis_queue
     await redis.enqueue_job(
         'run_agent_task',
         task_id=req.task_id,

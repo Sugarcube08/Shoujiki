@@ -3,78 +3,79 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: shoujiki
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: shoujiki
       POSTGRES_DB: shoujiki
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  redis:
+  redis-queue:
     image: redis:7-alpine
+    command: redis-server --requirepass shoujiki_v3_secure_redis_2026
     ports:
       - "6379:6379"
 
-  sandbox:
-    build:
-      context: ./apps/sandbox
+  redis-pubsub:
+    image: redis:7-alpine
+    command: redis-server --requirepass shoujiki_v3_secure_redis_2026
     ports:
-      - "8001:8001"
-    # runtime: runsc # Recommended for production: requires gVisor installed on host
-    cap_add:
-      - SYS_ADMIN
-    security_opt:
-      - no-new-privileges:true
-    # read_only: true # Disabled for now to ensure tempfile.TemporaryDirectory works, or we can mount /tmp
-    volumes:
-      - tmp_sandbox:/tmp
-    environment:
-      - PORT=8001
+      - "6380:6379"
 
   api:
     build:
       context: ./apps/api
-    ports:
-      - "8000:8000"
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://shoujiki:shoujiki@db:5432/shoujiki
+      REDIS_QUEUE_HOST: redis-queue
+      REDIS_PUBSUB_HOST: redis-pubsub
+      REDIS_PASSWORD: shoujiki
+      SANDBOX_URL: http://sandbox:8001
+      PYTHONPATH: /app/api
+      SECRET_KEY: "shoujiki-secret-key-change-in-production"
     depends_on:
       - db
-      - sandbox
-      - redis
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://shoujiki:password@db/shoujiki
-      - SOLANA_RPC_URL=https://api.devnet.solana.com
-      - SANDBOX_URL=http://sandbox:8001
-      - PLATFORM_SECRET_SEED=shoujiki_escrow_platform_secret_32
-      - SQUADS_PROGRAM_ID=SQDS4Byj9s7BfR7atvH9iSnduXW1U9CAdX9rW5L2S8X
-      - REDIS_HOST=redis
+      - redis-queue
+      - redis-pubsub
+    ports:
+      - "8000:8000"
 
   worker:
     build:
       context: ./apps/api
+      dockerfile: Dockerfile
+    command: python3 -m arq backend.core.tasks.WorkerSettings
+    environment:
+      DATABASE_URL: postgresql+asyncpg://shoujiki:shoujiki@db:5432/shoujiki
+      REDIS_QUEUE_HOST: redis-queue
+      REDIS_PUBSUB_HOST: redis-pubsub
+      REDIS_PASSWORD: shoujiki_v3_secure_redis_2026
+      SANDBOX_URL: http://sandbox:8001
+      PYTHONPATH: /app/api
     depends_on:
       - db
-      - sandbox
-      - redis
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://shoujiki:password@db/shoujiki
-      - SOLANA_RPC_URL=https://api.devnet.solana.com
-      - SANDBOX_URL=http://sandbox:8001
-      - PLATFORM_SECRET_SEED=shoujiki_escrow_platform_secret_32
-      - REDIS_HOST=redis
-    command: python3 -m arq backend.core.tasks.WorkerSettings
+      - redis-queue
+      - redis-pubsub
+
+  sandbox:
+    build:
+      context: ./apps/sandbox
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
 
   web:
     build:
       context: ./apps/web
-    ports:
-      - "3000:3000"
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: /api
+      PORT: 3000
     depends_on:
       - api
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
-      - NEXT_PUBLIC_SQUADS_PROGRAM_ID=SQDS4Byj9s7BfR7atvH9iSnduXW1U9CAdX9rW5L2S8X
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:
-  tmp_sandbox:

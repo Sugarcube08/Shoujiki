@@ -226,8 +226,7 @@ agent = Agent()`,
                     scrollBeyondLastLine: false,
                     readOnly: false,
                     automaticLayout: true,
-                    padding: { top: 20 },
-                    backgroundColor: '#09090b'
+                    padding: { top: 20 }
                   }}
                 />
               </div>

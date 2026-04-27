@@ -31,6 +31,11 @@ export const getConfig = async () => {
   return response.data;
 };
 
+export const getBillingConfig = async () => {
+  const response = await api.get('/billing/config');
+  return response.data;
+};
+
 export const getAgent = async (id: string) => {
   const response = await api.get(`/agents/${id}`);
   return response.data;
@@ -53,21 +58,6 @@ export const deleteAgent = async (id: string) => {
 
 export const testAgent = async (agentData: any) => {
   const response = await api.post('/agents/test', agentData);
-  return response.data;
-};
-
-export const getInternalWallet = async () => {
-  const response = await api.get('/billing/balance');
-  return response.data;
-};
-
-export const depositFunds = async (txSignature: string) => {
-  const response = await api.post('/billing/deposit', { tx_signature: txSignature });
-  return response.data;
-};
-
-export const withdrawFunds = async (amount: number) => {
-  const response = await api.post('/billing/withdraw', { amount });
   return response.data;
 };
 

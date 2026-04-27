@@ -36,9 +36,14 @@ class Task(Base):
     user_wallet = Column(String, nullable=False, index=True)
     input_data = Column(Text, nullable=False)
     result = Column(Text, nullable=True)
-    status = Column(String, default="pending") # pending, running, completed, failed
-    depth = Column(Float, default=0) # Track M2M recursion depth
-    execution_receipt = Column(JSON, nullable=True) # Verifiable receipt data
+    status = Column(String, default="queued") # queued, running, completed, failed, settled
+    depth = Column(Float, default=0)
+    
+    # Protocol Fields
+    escrow_pda = Column(String, nullable=True)
+    settlement_signature = Column(String, nullable=True)
+    execution_receipt = Column(JSON, nullable=True) 
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -57,7 +62,8 @@ class Workflow(Base):
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False)
     creator_wallet = Column(String, nullable=False, index=True)
-    steps = Column(JSON, nullable=False) # List of {agent_id, input_template}
+    # List of {id, agent_id, input_template, depends_on: [id]}
+    steps = Column(JSON, nullable=False) 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class WorkflowRun(Base):
@@ -66,8 +72,12 @@ class WorkflowRun(Base):
     id = Column(String, primary_key=True, index=True)
     workflow_id = Column(String, ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False)
     user_wallet = Column(String, nullable=False, index=True)
-    status = Column(String, default="pending") # pending, running, completed, failed
-    current_step_index = Column(Float, default=0)
-    results = Column(JSON, nullable=True) # List of results from each step
+    status = Column(String, default="queued") # queued, running, completed, failed
+    
+    # DAG Tracking
+    # List of {step_id: {status, result, receipt}}
+    completed_steps = Column(JSON, nullable=True, default={})
+    results = Column(JSON, nullable=True) 
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

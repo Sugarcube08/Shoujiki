@@ -12,14 +12,21 @@ from backend.modules.agents import service as agent_service
 from backend.modules.billing import service as billing_service
 from backend.db.models.models import Task, Workflow, WorkflowRun, Agent
 from sqlalchemy import update, select
+import uuid
+
+from backend.core.config import (
+    REDIS_QUEUE_HOST, REDIS_QUEUE_PORT, 
+    REDIS_PUBSUB_HOST, REDIS_PUBSUB_PORT, 
+    REDIS_PASSWORD
+)
 
 logger = logging.getLogger(__name__)
 
-REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "shoujiki_v3_secure_redis_2026")
-
 async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, creator_wallet: str, price: float, depth: int = 0):
+    """
+    Background worker task to execute agent in sandbox and settle payment on-chain.
+    Implements idempotency and fail-closed security.
+    """
     """
     Background worker task to execute agent in sandbox and settle payment.
     """
@@ -28,28 +35,36 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
         return
 
     logger.info(f"Worker: Starting task {task_id} for agent {agent_id} (depth: {depth})")
-    redis = ctx['redis']
+    redis_pubsub = ctx['redis_pubsub']
     
-    # 1. Update status to 'running'
     async with AsyncSessionLocal() as db:
-        # Get agent for scoring
+        # 1. Idempotency Check & Status Update
+        task_res = await db.execute(select(Task).where(Task.id == task_id))
+        db_task = task_res.scalars().first()
+        
+        if not db_task:
+            logger.error(f"Worker: Task {task_id} not found in database.")
+            return
+            
+        if db_task.status in ["completed", "failed", "settled"]:
+            logger.warning(f"Worker: Task {task_id} already in final state: {db_task.status}. Skipping.")
+            return
+
+        # Get agent for metadata
         agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
         agent = agent_res.scalars().first()
         
-        await db.execute(
-            update(Task).where(Task.id == task_id).values(status="running")
-        )
-        await db.commit()
-        await redis.publish(f"task:{task_id}", json.dumps({"status": "running"}))
-
-        # 2. Get agent details (already fetched above for scoring)
         if not agent:
             logger.error(f"Worker: Agent {agent_id} not found")
-            await db.execute(
-                update(Task).where(Task.id == task_id).values(status="failed", result="Agent not found")
-            )
+            db_task.status = "failed"
+            db_task.result = "Agent configuration not found"
             await db.commit()
             return
+
+        # Update to 'running'
+        db_task.status = "running"
+        await db.commit()
+        await redis_pubsub.publish(f"task:{task_id}", json.dumps({"status": "running"}))
 
         current_ver = next((v for v in agent.versions if v['version'] == agent.current_version), agent.versions[-1])
         
@@ -106,47 +121,48 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
             agent.reliability_score = agent.successful_runs / agent.total_runs
             
             await db.commit()
-            await redis.publish(f"task:{task_id}", json.dumps({"status": status, "result": result}))
+            await redis_pubsub.publish(f"task:{task_id}", json.dumps({"status": status, "result": result}))
             
-            # 5. Handle M2M Hire Requests (Machine-to-Machine Bridge)
+            # 4. M2M Bridge Handling (Agent hiring Agent)
             from backend.modules.billing.service import PLATFORM_WALLET
             hire_requests = exec_result.get("hire_requests", [])
             for hire in hire_requests:
-                hired_agent_id = hire.get("agent_id")
+                hired_id = hire.get("agent_id")
                 hired_input = hire.get("input_data")
-                logger.info(f"Worker: Agent {agent_id} is hiring agent {hired_agent_id}!")
                 
-                # For the demo, we auto-generate a nested task ID
-                new_task_id = f"m2m_{task_id[:8]}_{hired_agent_id[:8]}"
+                # Generate a globally unique M2M Task ID
+                new_task_id = f"m2m_{task_id[:8]}_{hired_id[:8]}_{uuid.uuid4().hex[:6]}"
+                logger.info(f"Worker: M2M Bridge - Agent {agent_id} hiring {hired_id}. New Task: {new_task_id}")
                 
-                async with AsyncSessionLocal() as db_m2m:
-                    hired_agent_res = await db_m2m.execute(select(Agent).where(Agent.id == hired_agent_id))
-                    hired_agent = hired_agent_res.scalars().first()
+                hired_agent_res = await db.execute(select(Agent).where(Agent.id == hired_id))
+                hired_agent = hired_agent_res.scalars().first()
+                
+                if hired_agent:
+                    # Create the protocol task record
+                    new_task = Task(
+                        id=new_task_id,
+                        agent_id=hired_id,
+                        user_wallet=PLATFORM_WALLET, # Platform pre-funds M2M demo escrows
+                        input_data=json.dumps(hired_input),
+                        status="queued",
+                        depth=depth + 1
+                    )
+                    db.add(new_task)
+                    await db.commit()
                     
-                    if hired_agent:
-                        # Create the M2M task
-                        new_task = Task(
-                            id=new_task_id,
-                            agent_id=hired_agent_id,
-                            user_wallet=PLATFORM_WALLET, # Platform pays for M2M demo
-                            input_data=hired_input,
-                            status="pending",
-                            depth=depth + 1
-                        )
-                        db_m2m.add(new_task)
-                        await db_m2m.commit()
-                        
-                        # Queue the next task in the chain
-                        await ctx['redis'].enqueue_job(
-                            'run_agent_task',
-                            task_id=new_task_id,
-                            agent_id=hired_agent_id,
-                            input_data=hired_input,
-                            creator_wallet=hired_agent.creator_wallet,
-                            price=hired_agent.price,
-                            depth=depth + 1
-                        )
-                        logger.info(f"Worker: M2M task {new_task_id} queued for execution (new depth: {depth + 1})")
+                    # NOTE: In V4, the hiring agent's treasury would sign this escrow.
+                    # For V3 Alpha demo, the platform pre-funds the M2M task execution.
+                    
+                    await ctx['redis_queue'].enqueue_job(
+                        'run_agent_task',
+                        task_id=new_task_id,
+                        agent_id=hired_id,
+                        input_data=hired_input,
+                        creator_wallet=hired_agent.creator_wallet,
+                        price=hired_agent.price,
+                        depth=depth + 1
+                    )
+                    logger.info(f"Worker: M2M task {new_task_id} dispatched.")
 
             # 6. Settle payment (On-chain Escrow)
             # The task has the user_wallet, and agent has the creator_wallet
@@ -184,69 +200,71 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
 async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: dict):
     """
     Background worker task to execute a multi-agent workflow.
-    Supports parallel execution of independent steps (v2).
+    Implements step-by-step state tracking and idempotency.
     """
     logger.info(f"Worker: Starting workflow run {run_id} for workflow {workflow_id}")
-    redis = ctx['redis']
+    redis_pubsub = ctx['redis_pubsub']
     
     async with AsyncSessionLocal() as db:
-        # 1. Update status to 'running'
-        await db.execute(
-            update(WorkflowRun).where(WorkflowRun.id == run_id).values(status="running")
-        )
+        # 1. Load State & Idempotency Check
+        run_res = await db.execute(select(WorkflowRun).where(WorkflowRun.id == run_id))
+        db_run = run_res.scalars().first()
+        
+        if not db_run or db_run.status in ["completed", "failed"]:
+            logger.warning(f"Worker: Workflow run {run_id} already finished or not found. Skipping.")
+            return
+
+        db_run.status = "running"
         await db.commit()
-        await redis.publish(f"workflow:{run_id}", json.dumps({"status": "running", "step": 0}))
+        await redis_pubsub.publish(f"workflow:{run_id}", json.dumps({"status": "running"}))
 
         # 2. Get workflow
-        result = await db.execute(select(Workflow).where(Workflow.id == workflow_id))
-        workflow = result.scalars().first()
+        wf_res = await db.execute(select(Workflow).where(Workflow.id == workflow_id))
+        workflow = wf_res.scalars().first()
         if not workflow:
             logger.error(f"Worker: Workflow {workflow_id} not found")
             return
 
-        workflow_results = {"steps": [], "initial_input": initial_input}
-        
-        # Parallel Execution Logic:
-        # In this version, we process steps as a list.
-        # Future enhancement: parse dependencies to execute independent branches.
-        # For V3 Alpha, we'll keep it sequential but implement robust retry and receipting.
-        
+        # Initialize tracking if new
+        if not db_run.completed_steps:
+            db_run.completed_steps = {}
+            db_run.results = {"steps": [], "initial_input": initial_input}
+
+        # 3. Process Steps (DAG Linear Fallback for MVP)
+        # Future: Resolve dependency tree for parallel execution
         for i, step in enumerate(workflow.steps):
+            step_id = step.get("id", str(i))
+            
+            # Skip if already completed (Idempotency)
+            if step_id in db_run.completed_steps:
+                continue
+
             agent_id = step["agent_id"]
             template = step["input_template"]
             
-            logger.info(f"Worker: Workflow {run_id} - Executing step {i} (Agent {agent_id})")
-            await redis.publish(f"workflow:{run_id}", json.dumps({"status": "running", "step": i, "agent_id": agent_id}))
+            logger.info(f"Worker: Workflow {run_id} - Executing step {step_id} (Agent {agent_id})")
+            await redis_pubsub.publish(f"workflow:{run_id}", json.dumps({
+                "status": "running", 
+                "step_id": step_id, 
+                "agent_id": agent_id
+            }))
 
-            # ... (sandbox execution same as before but with better error handling)
             try:
-                # Get agent
                 agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
                 agent = agent_res.scalars().first()
-                if not agent:
-                    raise Exception(f"Agent {agent_id} not found")
+                if not agent: raise Exception(f"Agent {agent_id} not found")
 
                 current_ver = next((v for v in agent.versions if v['version'] == agent.current_version), agent.versions[-1])
                 
-                # Input mapping
-                prev_result = workflow_results["steps"][-1]["output"] if workflow_results["steps"] else initial_input
+                # Resolve Input: Check previous results or initial
+                prev_out = db_run.results["steps"][-1]["output"] if db_run.results["steps"] else initial_input
                 
-                # Standard input payload for the agent
-                step_input = {"input": prev_result}
-                
-                # If there's a template, apply it
+                step_input = {"input": prev_out}
                 if template and "{{previous_result}}" in template:
-                    template_filled = template.replace("{{previous_result}}", str(prev_result))
-                    try:
-                        # Attempt to parse as JSON if it looks like a JSON object
-                        if template_filled.strip().startswith("{"):
-                           step_input = json.loads(template_filled)
-                        else:
-                           step_input = {"input": template_filled}
-                    except:
-                        step_input = {"input": template_filled}
+                    filled = template.replace("{{previous_result}}", str(prev_out))
+                    try: step_input = json.loads(filled) if filled.strip().startswith("{") else {"input": filled}
+                    except: step_input = {"input": filled}
 
-                # Sandbox Execute
                 exec_result = await execute_in_sandbox(
                     files=current_ver['files'],
                     requirements=current_ver['requirements'],
@@ -255,59 +273,64 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
                 )
 
                 if not exec_result["success"]:
-                    raise Exception(f"Step {i} agent error: {exec_result['error']}")
+                    raise Exception(f"Agent {agent_id} error: {exec_result['error']}")
 
-                # Success: update results
+                # Success: update tracking
                 step_output = exec_result["output"]
-                workflow_results["steps"].append({
-                    "agent_id": agent_id, 
+                step_data = {
+                    "status": "completed",
                     "output": step_output,
-                    "status": "success",
                     "receipt": hashlib.sha256(str(step_output).encode()).hexdigest()
+                }
+                
+                db_run.completed_steps[step_id] = step_data
+                db_run.results["steps"].append({
+                    "step_id": step_id,
+                    "agent_id": agent_id,
+                    "output": step_output
                 })
 
-                # Update Agent contribution and BALANCE for Swarm participation
+                # Update Agent economic & trust scores
                 agent.balance += agent.price
-                agent.contribution_score += 2.0 # Higher reward for swarm contribution
+                agent.contribution_score += 2.0
                 agent.successful_runs += 1
                 agent.total_runs += 1
+                if agent.successful_runs >= 50: agent.trust_level = "elite"
+                elif agent.successful_runs >= 10: agent.trust_level = "trusted"
 
-                # Dynamic Trust Leveling
-                if agent.successful_runs >= 50:
-                    agent.trust_level = "elite"
-                elif agent.successful_runs >= 10:
-                    agent.trust_level = "trusted"
-
-                await db.execute(
-                    update(WorkflowRun).where(WorkflowRun.id == run_id).values(
-                        current_step_index=i + 1,
-                        results=workflow_results
-                    )
-                )
+                # Commit progress after each step (Robustness)
                 await db.commit()
 
             except Exception as e:
-                error_msg = str(e)
-                logger.error(f"Worker: Workflow {run_id} failed at step {i}: {error_msg}")
-                await db.execute(update(WorkflowRun).where(WorkflowRun.id == run_id).values(status="failed", results={"error": error_msg}))
+                logger.error(f"Worker: Workflow {run_id} failed at step {step_id}: {e}")
+                db_run.status = "failed"
                 await db.commit()
-                await redis.publish(f"workflow:{run_id}", json.dumps({"status": "failed", "error": error_msg}))
+                await redis_pubsub.publish(f"workflow:{run_id}", json.dumps({"status": "failed", "error": str(e)}))
                 return
 
-        # 4. Finish workflow
-        await db.execute(update(WorkflowRun).where(WorkflowRun.id == run_id).values(status="completed"))
+        # 4. Finalize Workflow
+        db_run.status = "completed"
         await db.commit()
-        await redis.publish(f"workflow:{run_id}", json.dumps({"status": "completed", "results": workflow_results}))
-        logger.info(f"Worker: Workflow {run_id} completed successfully")
+        await redis_pubsub.publish(f"workflow:{run_id}", json.dumps({"status": "completed", "results": db_run.results}))
+        logger.info(f"Worker: Workflow {run_id} finalized.")
 
 async def startup(ctx):
     logger.info("Worker starting up...")
+    ctx['redis_queue'] = await create_pool(RedisSettings(
+        host=REDIS_QUEUE_HOST, port=REDIS_QUEUE_PORT, password=REDIS_PASSWORD
+    ))
+    ctx['redis_pubsub'] = await create_pool(RedisSettings(
+        host=REDIS_PUBSUB_HOST, port=REDIS_PUBSUB_PORT, password=REDIS_PASSWORD
+    ))
+    logger.info("Worker: Redis connections initialized: Queue and PubSub isolated.")
 
 async def shutdown(ctx):
     logger.info("Worker shutting down...")
+    await ctx['redis_queue'].close()
+    await ctx['redis_pubsub'].close()
 
 class WorkerSettings:
     functions = [run_agent_task, run_workflow_task]
-    redis_settings = RedisSettings(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
+    redis_settings = RedisSettings(host=REDIS_QUEUE_HOST, port=REDIS_QUEUE_PORT, password=REDIS_PASSWORD)
     on_startup = startup
     on_shutdown = shutdown

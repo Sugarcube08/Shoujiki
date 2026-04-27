@@ -104,7 +104,7 @@ export default function SwarmsPage() {
       await fetchData();
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Failed to start swarm. Ensure you have sufficient balance.');
+      setError(err.response?.data?.detail || 'Failed to start swarm. Ensure all nodes are available.');
     } finally {
       setRunningId(null);
     }

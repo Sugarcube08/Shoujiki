@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getAgent, runAgent, getConfig, getInternalWallet } from '@/lib/api';
+import { getAgent, runAgent, getConfig } from '@/lib/api';
 import { setPlatformWallet } from '@/lib/solana';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
@@ -11,7 +11,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { 
   Loader2, ArrowLeft, Play, Terminal, 
   AlertCircle, BadgeCheck, Cpu, Activity, Lock, 
-  CheckCircle2, Fingerprint, Wallet as WalletIcon
+  CheckCircle2, Fingerprint
 } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { cn, truncateWallet } from '@/lib/utils';
@@ -24,7 +24,6 @@ export default function AgentRunPage() {
   const { isAuthenticated, login, connected, publicKey } = useWalletAuth();
 
   const [agent, setAgent] = useState<any>(null);
-  const [wallet, setWallet] = useState<any>(null);
   const [inputData, setInputData] = useState('{"prompt": "Hello"}');
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<'idle' | 'signing' | 'executing' | 'done'>('idle');
@@ -34,13 +33,11 @@ export default function AgentRunPage() {
 
   const fetchState = async () => {
     try {
-      const [agentData, config, walletData] = await Promise.all([
+      const [agentData, config] = await Promise.all([
         getAgent(id as string),
-        getConfig(),
-        getInternalWallet()
+        getConfig()
       ]);
       setAgent(agentData);
-      setWallet(walletData);
       if (config.platform_wallet) {
         setPlatformWallet(config.platform_wallet);
       }
@@ -60,12 +57,7 @@ export default function AgentRunPage() {
   };
 
   const handleRun = async () => {
-    if (!publicKey || !isAuthenticated || !signMessage || !agent || !wallet) return;
-
-    if (wallet.balance < agent.price) {
-      setError(`Minimum balance required: ${agent.price} SOL`);
-      return;
-    }
+    if (!publicKey || !isAuthenticated || !signMessage || !agent) return;
 
     setError('');
     setResult(null);
@@ -131,12 +123,6 @@ export default function AgentRunPage() {
         <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-100 transition-colors text-xs font-medium">
           <ArrowLeft size={14} /> Back
         </button>
-        {wallet && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-medium text-zinc-300">
-            <WalletIcon size={12} className="text-zinc-500" />
-            {wallet.balance.toFixed(3)} SOL
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 text-left">

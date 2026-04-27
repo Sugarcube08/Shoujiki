@@ -16,13 +16,15 @@ import os
 import logging
 import json
 import asyncio
+from backend.core.config import (
+    REDIS_QUEUE_HOST, REDIS_QUEUE_PORT, 
+    REDIS_PUBSUB_HOST, REDIS_PUBSUB_PORT, 
+    REDIS_PASSWORD
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,10 +35,14 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("SECRET_KEY loaded from environment.")
 
-    # Initialize Redis pool for background tasks
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "shoujiki_v3_secure_redis_2026")
-    app.state.redis = await create_pool(RedisSettings(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD))
-    logger.info("Redis pool initialized with security authorization")
+    # Initialize Redis connections
+    app.state.redis_queue = await create_pool(RedisSettings(
+        host=REDIS_QUEUE_HOST, port=REDIS_QUEUE_PORT, password=REDIS_PASSWORD
+    ))
+    app.state.redis_pubsub = await create_pool(RedisSettings(
+        host=REDIS_PUBSUB_HOST, port=REDIS_PUBSUB_PORT, password=REDIS_PASSWORD
+    ))
+    logger.info("Redis connections initialized: Queue and PubSub isolated.")
 
     # Startup: Create tables with retries (Wait for DB to awaken)
     max_retries = 10
@@ -60,14 +66,6 @@ async def lifespan(app: FastAPI):
                     await conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS mint_address VARCHAR"))
                     await conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS balance FLOAT DEFAULT 0"))
                     await conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS treasury_address VARCHAR"))
-                    # Create user_wallets table if it doesn't exist
-                    await conn.execute(text("""
-                        CREATE TABLE IF NOT EXISTS user_wallets (
-                            wallet_address VARCHAR PRIMARY KEY,
-                            balance FLOAT DEFAULT 0,
-                            updated_at TIMESTAMP WITH TIME ZONE
-                        )
-                    """))
                 except Exception as migrate_err:
                     logger.warning(f"Manual migration notice (likely already applied): {migrate_err}")
 
@@ -114,7 +112,7 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
     await websocket.accept()
     logger.info(f"WebSocket: Client connected for task {task_id}")
     
-    redis = app.state.redis
+    redis = app.state.redis_pubsub
     pubsub = redis.pubsub()
     await pubsub.subscribe(f"task:{task_id}")
     
