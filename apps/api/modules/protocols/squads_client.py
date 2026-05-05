@@ -264,11 +264,4 @@ class SquadsClient:
             
         except Exception as e:
             logger.error(f"VACN_SQUADS: Failed to sign M2M escrow: {e}")
-            return Falsemount
-            )
-            
-            return proposal_id is not None
-            
-        except Exception as e:
-            logger.error(f"VACN_SQUADS: Failed to sign M2M escrow: {e}")
             return False

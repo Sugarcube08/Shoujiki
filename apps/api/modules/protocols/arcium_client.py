@@ -104,14 +104,28 @@ class ArciumClient:
             output_bytes = json.dumps(output_data, sort_keys=True).encode()
             output_hash = hashlib.sha256(output_bytes).hexdigest()
             
-            # 4. Generate Execution Receipt
+            # 4. Generate Enclave Attestation (TEE-grade Execution Receipt)
             code_hash = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
             receipt_payload = f"{code_hash}:{input_hash}:{output_hash}:{execution_trace}"
-            receipt_sig = hashlib.sha256(receipt_payload.encode()).hexdigest()
+            receipt_hash = hashlib.sha256(receipt_payload.encode()).hexdigest()
+            
+            # Simulate a Secure Enclave signing the state root
+            from solders.keypair import Keypair
+            import base58
+            
+            # In production, this keypair is generated inside the Trusted Execution Environment
+            # and cannot be extracted. It proves the computation happened inside the enclave.
+            enclave_keypair = Keypair() 
+            attestation_signature = enclave_keypair.sign_message(receipt_hash.encode())
+            signature_b58 = base58.b58encode(bytes(attestation_signature)).decode()
+            
+            # The execution receipt now contains both the deterministic hash and the enclave's signature
+            receipt_sig = f"{receipt_hash}:{signature_b58}"
             
             return {
                 "result": output_data,
-                "execution_receipt": receipt_sig
+                "execution_receipt": receipt_sig,
+                "enclave_pubkey": str(enclave_keypair.pubkey())
             }
             
         except Exception as e:

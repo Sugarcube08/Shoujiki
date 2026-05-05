@@ -3,19 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Code2, Layers, Zap, Activity, Database, LayoutGrid, Wallet, Landmark } from 'lucide-react';
+import { ShoppingCart, Code2, Layers, Zap, Activity, Database, LayoutGrid, Wallet, Landmark, ShieldAlert, FileSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const navItems = [
-  { label: 'Overview', href: '/my-agents', icon: LayoutGrid },
+  { label: 'Fleet Overview', href: '/my-agents', icon: LayoutGrid },
   { label: 'Marketplace', href: '/marketplace', icon: ShoppingCart },
-  { label: 'Swarms', href: '/swarms', icon: Layers },
-  { label: 'Developer', href: '/dev', icon: Code2 },
-  { label: 'App Wallet', href: '/wallet', icon: Wallet },
-  { label: 'Agent Finance', href: '/wallet', icon: Landmark },
+  { label: 'Swarm Builder', href: '/swarms', icon: Layers },
+  { label: 'Protocol Bench', href: '/dev', icon: Code2 },
+  { label: 'Treasury', href: '/wallet', icon: Landmark },
+  { label: 'Proof Explorer', href: '/explorer', icon: FileSearch },
+  { label: 'Dispute Portal', href: '/disputes', icon: ShieldAlert },
 ];
 
 export const Sidebar = () => {

@@ -26,8 +26,8 @@ class SwitchboardClient:
     """
 
     def __init__(self):
-        # Default Switchboard V3 program ID
-        self.program_id = Pubkey.from_string("SW1TCH7qEPTUqzhMvY7DMDnNvA7d2u7t6N4q2DMD")
+        # Switchboard V3 Attestation Program ID (TEE)
+        self.program_id = Pubkey.from_string("Aio4gaXjXzJNVLtzwtNVmSqGKpANtXhybbkhtAC94ji2")
 
     async def create_verification_request(self, task_id: str, receipt_hash: str) -> str:
         """

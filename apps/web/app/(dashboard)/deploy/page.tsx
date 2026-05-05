@@ -14,18 +14,13 @@ const IDKitWidget = dynamic(
   { ssr: false }
 );
 
-import { 
-  Rocket, 
-  CheckCircle2, 
-  Loader2, 
-  ArrowLeft, 
-  ShieldCheck, 
-  Zap, 
-  Bot, 
-  Lock,
+import {
+  Rocket,
+  CheckCircle2,
+  Loader2,
+  ArrowLeft,
+  Bot,
   Cpu,
-  Activity,
-  Fingerprint,
   UserCheck
 } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
@@ -35,10 +30,11 @@ import { cn } from '@/lib/utils';
 import type { ISuccessResult } from '@worldcoin/idkit';
 import { VerificationLevel } from '@worldcoin/idkit';
 
+
 export default function DeploySpacePage() {
   const router = useRouter();
   const { isAuthenticated, connected, login } = useWalletAuth();
-  
+
   const [draft, setDraft] = useState<any>(null);
   const [status, setStatus] = useState<'idle' | 'validating' | 'minting' | 'done'>('idle');
   const [error, setError] = useState('');
@@ -58,10 +54,10 @@ export default function DeploySpacePage() {
 
   const handleConfirmDeploy = async () => {
     if (!draft || !isAuthenticated) return;
-    
+
     setError('');
     setStatus('validating');
-    
+
     try {
       // Inject World ID proof into the deployment data
       const deploymentData = {
@@ -73,7 +69,7 @@ export default function DeploySpacePage() {
       setStatus('minting');
       setDeployedAgent(res);
       localStorage.removeItem('shoujiki_draft');
-      
+
       setTimeout(() => {
         setStatus('done');
       }, 2000);
@@ -99,14 +95,14 @@ export default function DeploySpacePage() {
   return (
     <div className="space-y-12 animate-in fade-in duration-500 pb-24 text-left">
       <div className="flex items-center justify-between">
-        <button 
+        <button
           onClick={() => router.push('/dev')}
           className="flex items-center gap-2 text-zinc-500 hover:text-zinc-100 transition-colors text-xs font-medium"
         >
           <ArrowLeft size={14} /> Back to Editor
         </button>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-           Registry Ready
+          Registry Ready
         </div>
       </div>
 
@@ -119,25 +115,25 @@ export default function DeploySpacePage() {
         <Card className="border-green-500/20 bg-green-500/5">
           <CardContent className="flex flex-col items-center justify-center py-20 gap-8 text-center">
             <div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center">
-               <CheckCircle2 size={32} className="text-green-500" />
+              <CheckCircle2 size={32} className="text-green-500" />
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-white">Sovereign Node Deployed</h2>
               <p className="text-zinc-500 text-sm">Your autonomous protocol node is now active.</p>
             </div>
-            
+
             <div className="w-full max-w-lg p-5 bg-zinc-950 border border-zinc-800 rounded-xl space-y-4">
-               <div className="space-y-1 text-left">
-                 <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-2">Passport_Asset (Metaplex)</span>
-                 <p className="text-xs font-mono text-zinc-400 break-all bg-zinc-900 p-3 rounded-lg border border-zinc-800">
-                   {deployedAgent?.mint_address || 'Confirmed on Devnet'}
-                 </p>
-               </div>
+              <div className="space-y-1 text-left">
+                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-2">Passport_Asset (Metaplex)</span>
+                <p className="text-xs font-mono text-zinc-400 break-all bg-zinc-900 p-3 rounded-lg border border-zinc-800">
+                  {deployedAgent?.mint_address || 'Confirmed on Devnet'}
+                </p>
+              </div>
             </div>
 
             <div className="flex gap-4 w-full max-w-lg">
-               <Button onClick={() => router.push('/my-agents')} className="flex-1 h-12 rounded-xl">View Fleet</Button>
-               <Button variant="outline" onClick={() => router.push('/marketplace')} className="flex-1 h-12 rounded-xl border-zinc-800">Marketplace</Button>
+              <Button onClick={() => router.push('/my-agents')} className="flex-1 h-12 rounded-xl">View Fleet</Button>
+              <Button variant="outline" onClick={() => router.push('/marketplace')} className="flex-1 h-12 rounded-xl border-zinc-800">Marketplace</Button>
             </div>
           </CardContent>
         </Card>
@@ -152,13 +148,13 @@ export default function DeploySpacePage() {
               </CardHeader>
               <CardContent className="p-8 space-y-8">
                 <div className="flex items-center gap-5">
-                   <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center">
-                      <Cpu size={32} className="text-zinc-600" />
-                   </div>
-                   <div className="space-y-1">
-                      <p className="text-xl font-bold text-white leading-tight">{draft.name}</p>
-                      <p className="text-xs font-mono text-zinc-500 uppercase">{draft.id}</p>
-                   </div>
+                  <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center">
+                    <Cpu size={32} className="text-zinc-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xl font-bold text-white leading-tight">{draft.name}</p>
+                    <p className="text-xs font-mono text-zinc-500 uppercase">{draft.id}</p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -173,44 +169,44 @@ export default function DeploySpacePage() {
                 </div>
 
                 <div className="space-y-4">
-                   <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
-                      <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Entrypoint</span>
-                      <span className="text-[10px] font-mono text-blue-500 font-bold">{draft.entrypoint}</span>
-                   </div>
-                   <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
+                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Entrypoint</span>
+                    <span className="text-[10px] font-mono text-blue-500 font-bold">{draft.entrypoint}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {Object.keys(draft.files).map(f => (
                       <span key={f} className="text-[9px] font-bold uppercase bg-zinc-900 border border-zinc-800 text-zinc-500 px-2 py-1 rounded">
                         {f}
                       </span>
                     ))}
-                   </div>
+                  </div>
                 </div>
 
                 {/* World ID Widget */}
                 <div className="pt-6 border-t border-zinc-800/60">
-                   <IDKitWidget
-                      app_id="app_agentos_staging"
-                      action="mint_agent_passport"
-                      onSuccess={handleWorldIdSuccess}
-                      verification_level={VerificationLevel.Device}
-                   >
-                      {({ open }) => (
-                         <Button 
-                            variant="outline" 
-                            onClick={open}
-                            className={cn(
-                               "w-full h-12 rounded-xl border-zinc-800 gap-3 text-xs font-bold uppercase tracking-widest",
-                               worldIdProof ? "border-green-500/50 text-green-500 bg-green-500/5" : "text-zinc-400 hover:text-white"
-                            )}
-                         >
-                            {worldIdProof ? (
-                               <><CheckCircle2 size={16} /> Human Verified</>
-                            ) : (
-                               <><UserCheck size={16} /> Verify Personhood</>
-                            )}
-                         </Button>
-                      )}
-                   </IDKitWidget>
+                  <IDKitWidget
+                    app_id="app_agentos_staging"
+                    action="mint_agent_passport"
+                    onSuccess={handleWorldIdSuccess}
+                    verification_level={VerificationLevel.Device}
+                  >
+                    {({ open }: any) => (
+                      <Button
+                        variant="outline"
+                        onClick={open}
+                        className={cn(
+                          "w-full h-12 rounded-xl border-zinc-800 gap-3 text-xs font-bold uppercase tracking-widest",
+                          worldIdProof ? "border-green-500/50 text-green-500 bg-green-500/5" : "text-zinc-400 hover:text-white"
+                        )}
+                      >
+                        {worldIdProof ? (
+                          <><CheckCircle2 size={16} /> Human Verified</>
+                        ) : (
+                          <><UserCheck size={16} /> Verify Personhood</>
+                        )}
+                      </Button>
+                    )}
+                  </IDKitWidget>
                 </div>
               </CardContent>
             </Card>
@@ -229,35 +225,35 @@ export default function DeploySpacePage() {
                     { label: "Metaplex Passport", desc: "Minting on-chain identity asset (Passport).", active: false, done: false }
                   ].map((step, i) => (
                     <div key={i} className="flex gap-6">
-                       <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center border-2 border-zinc-900 shrink-0 transition-all",
-                          step.active ? "bg-blue-600 border-blue-400/20" : step.done ? "bg-green-600 border-green-400/20" : "bg-zinc-900 border-zinc-800"
-                       )}>
-                          {step.active ? <Loader2 size={16} className="animate-spin text-white" /> : <CheckCircle2 size={16} className={step.done ? "text-white" : "text-zinc-700"} />}
-                       </div>
-                       <div className="space-y-1">
-                          <p className={cn("text-sm font-bold uppercase tracking-wide", step.active || step.done ? "text-white" : "text-zinc-600")}>{i+1}. {step.label}</p>
-                          <p className="text-xs text-zinc-500 font-medium leading-relaxed">{step.desc}</p>
-                       </div>
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center border-2 border-zinc-900 shrink-0 transition-all",
+                        step.active ? "bg-blue-600 border-blue-400/20" : step.done ? "bg-green-600 border-green-400/20" : "bg-zinc-900 border-zinc-800"
+                      )}>
+                        {step.active ? <Loader2 size={16} className="animate-spin text-white" /> : <CheckCircle2 size={16} className={step.done ? "text-white" : "text-zinc-700"} />}
+                      </div>
+                      <div className="space-y-1">
+                        <p className={cn("text-sm font-bold uppercase tracking-wide", step.active || step.done ? "text-white" : "text-zinc-600")}>{i + 1}. {step.label}</p>
+                        <p className="text-xs text-zinc-500 font-medium leading-relaxed">{step.desc}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
 
                 <div className="pt-8 border-t border-zinc-900">
-                   <Button 
-                     className="w-full h-14 rounded-xl font-bold text-sm tracking-widest uppercase shadow-xl"
-                     onClick={handleConfirmDeploy}
-                     disabled={status !== 'idle' || !connected || (!worldIdProof && process.env.NODE_ENV === 'production')}
-                     isLoading={status !== 'idle'}
-                   >
-                      <Rocket size={18} />
-                      Initialize Launch Sequence
-                   </Button>
-                   {!worldIdProof && (
-                      <p className="text-center text-[10px] font-bold text-zinc-600 uppercase mt-4 tracking-tighter">
-                         World ID Verification Recommended for Sybil Resistance
-                      </p>
-                   )}
+                  <Button
+                    className="w-full h-14 rounded-xl font-bold text-sm tracking-widest uppercase shadow-xl"
+                    onClick={handleConfirmDeploy}
+                    disabled={status !== 'idle' || !connected || (!worldIdProof && process.env.NODE_ENV === 'production')}
+                    isLoading={status !== 'idle'}
+                  >
+                    <Rocket size={18} />
+                    Initialize Launch Sequence
+                  </Button>
+                  {!worldIdProof && (
+                    <p className="text-center text-[10px] font-bold text-zinc-600 uppercase mt-4 tracking-tighter">
+                      World ID Verification Recommended for Sybil Resistance
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

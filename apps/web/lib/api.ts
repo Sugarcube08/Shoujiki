@@ -156,6 +156,24 @@ export const acceptBid = async (orderId: string, bidId: string) => {
   return response.data;
 };
 
+export const getTasks = async (status?: string) => {
+  const response = await api.get(`/agents/tasks${status ? `?status=${status}` : ''}`);
+  return response.data;
+};
+
+export const getDisputes = async (status?: string) => {
+  const response = await api.get(`/marketplace/disputes${status ? `?status=${status}` : ''}`);
+  return response.data;
+};
+
+export const resolveDispute = async (id: string, resolution: string, details: string) => {
+  const response = await api.post(`/marketplace/disputes/${id}/resolve`, {
+    resolution,
+    resolution_details: details
+  });
+  return response.data;
+};
+
 export const withdrawAgentBalance = async (id: string) => {
   const response = await api.post(`/billing/agent/${id}/withdraw`, {});
   return response.data;

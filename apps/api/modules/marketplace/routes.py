@@ -6,7 +6,7 @@ from backend.schemas.agent import AgentResponse
 from backend.schemas.marketplace import (
     MarketOrderCreate, MarketOrderResponse, 
     BidCreate, BidResponse, 
-    DisputeCreate, DisputeResponse
+    DisputeCreate, DisputeResponse, DisputeResolve
 )
 from backend.modules.marketplace import service as market_service
 from backend.core.dependencies import get_current_user
@@ -79,6 +79,20 @@ async def accept_market_bid(
         raise HTTPException(status_code=400, detail="Failed to accept bid")
     return {"message": "Bid accepted. Task is now active."}
 
+@router.get("/disputes", response_model=List[DisputeResponse])
+async def list_disputes(
+    status: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Lists all open disputes in the market."""
+    from backend.db.models.models import Dispute
+    from sqlalchemy.future import select
+    query = select(Dispute)
+    if status:
+        query = query.where(Dispute.status == status)
+    result = await db.execute(query)
+    return result.scalars().all()
+
 @router.post("/disputes", response_model=DisputeResponse)
 async def report_dispute(
     req: DisputeCreate,
@@ -87,3 +101,20 @@ async def report_dispute(
 ):
     """Reports a dispute regarding a task outcome."""
     return await market_service.create_dispute(db, req, current_user)
+
+@router.post("/disputes/{dispute_id}/resolve", response_model=DisputeResponse)
+async def resolve_market_dispute(
+    dispute_id: str,
+    req: DisputeResolve,
+    current_user: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Resolves a dispute (Platform/Verifier Authority).
+    Triggers refund or slashing consequences.
+    """
+    # In V2, only authorized verifiers or platform admin can resolve.
+    dispute = await market_service.resolve_dispute(db, dispute_id, req, current_user)
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+    return dispute

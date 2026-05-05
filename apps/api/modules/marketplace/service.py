@@ -3,8 +3,8 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update, delete
-from backend.db.models.models import MarketOrder, Bid, Dispute, Agent
-from backend.schemas.marketplace import MarketOrderCreate, BidCreate, DisputeCreate
+from backend.db.models.models import MarketOrder, Bid, Dispute, Agent, Task
+from backend.schemas.marketplace import MarketOrderCreate, BidCreate, DisputeCreate, DisputeResolve
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
@@ -98,3 +98,40 @@ async def create_dispute(db: AsyncSession, dispute_data: DisputeCreate, reporter
     await db.refresh(db_dispute)
     logger.info(f"MARKET: Dispute {dispute_id} created for task {dispute_data.task_id}")
     return db_dispute
+
+async def resolve_dispute(db: AsyncSession, dispute_id: str, resolution_data: DisputeResolve, admin_wallet: str) -> Optional[Dispute]:
+    dispute_res = await db.execute(select(Dispute).where(Dispute.id == dispute_id))
+    dispute = dispute_res.scalars().first()
+    if not dispute:
+        return None
+        
+    dispute.status = "resolved" if resolution_data.resolution != "dismiss" else "dismissed"
+    dispute.resolution_details = resolution_data.resolution_details
+    
+    # Apply protocol consequences
+    task_res = await db.execute(select(Task).where(Task.id == dispute.task_id))
+    task = task_res.scalars().first()
+    
+    if task:
+        if resolution_data.resolution == "refund":
+            # In a real on-chain implementation, we would call a refund instruction on the escrow program
+            task.status = "refunded"
+            logger.info(f"MARKET: Task {task.id} refunded to {task.user_wallet} due to dispute {dispute_id}")
+        elif resolution_data.resolution == "slash":
+            task.status = "slashed"
+            logger.info(f"MARKET: Task {task.id} agent slashed due to dispute {dispute_id}")
+            
+            # Penalize agent reputation
+            agent_res = await db.execute(select(Agent).where(Agent.id == task.agent_id))
+            agent = agent_res.scalars().first()
+            if agent:
+                agent.successful_runs = max(0, agent.successful_runs - 2) # Strict penalty
+                
+                # Recalculate credit profile
+                from backend.modules.billing import credit_service
+                await credit_service.update_agent_credit_score(db, agent.id)
+
+    await db.commit()
+    await db.refresh(dispute)
+    logger.info(f"MARKET: Dispute {dispute_id} resolved with action: {resolution_data.resolution}")
+    return dispute

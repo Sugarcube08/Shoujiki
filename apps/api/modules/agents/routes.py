@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from typing import List
+from typing import List, Optional
 from backend.db.session import get_db
 from backend.schemas.agent import AgentCreate, AgentResponse, AgentTestRequest
 from backend.schemas.task import RunRequest, TaskResponse, TaskHistoryResponse
@@ -111,6 +111,37 @@ async def test_agent(
         return envelope
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/tasks", response_model=List[dict])
+async def list_tasks(
+    status: Optional[str] = None,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Lists all tasks. Used by the Proof Explorer to display execution receipts
+    and challenge period statuses.
+    """
+    from backend.db.models.models import Task
+    query = select(Task).order_by(Task.created_at.desc())
+    if status:
+        query = query.where(Task.status == status)
+    query = query.limit(limit)
+    
+    result = await db.execute(query)
+    tasks = result.scalars().all()
+    
+    # We return a dict because the Task schema might not be fully defined for public responses
+    return [
+        {
+            "id": t.id,
+            "agent_id": t.agent_id,
+            "status": t.status,
+            "poae_hash": t.poae_hash,
+            "settlement_signature": t.settlement_signature,
+            "created_at": t.created_at.isoformat() if t.created_at else None
+        } for t in tasks
+    ]
 
 @router.post("/deploy", response_model=AgentResponse)
 async def deploy_agent(

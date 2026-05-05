@@ -44,6 +44,10 @@ class DisputeCreate(BaseModel):
     reason: str
     evidence: Optional[Dict] = None
 
+class DisputeResolve(BaseModel):
+    resolution: str # 'refund', 'slash', 'dismiss'
+    resolution_details: Optional[str] = None
+
 class DisputeResponse(BaseModel):
     id: str
     task_id: str

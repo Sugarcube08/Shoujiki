@@ -11,7 +11,7 @@ from backend.modules.protocols.squads_client import SquadsClient
 from backend.modules.protocols.switchboard_client import SwitchboardClient
 from backend.modules.billing import service as billing_service
 from backend.modules.billing import treasury_service
-from backend.db.models.models import Task, Workflow, WorkflowRun, Agent
+from backend.db.models.models import Task, Workflow, WorkflowRun, Agent, MarketOrder
 from sqlalchemy import update, select
 from backend.db.session import AsyncSessionLocal
 
@@ -150,18 +150,16 @@ async def run_agent_task(ctx, task_id: str, agent_id: str, input_data: dict, cre
             logger.info(f"VACN Protocol: Submitting receipt for task {task_id} to Switchboard")
             sb_tx = await switchboard_client.create_verification_request(task_id, receipt_sig)
             
-            # 8. Protocol Settlement: Propose outcome on-chain (Submit Receipt)
-            logger.info(f"VACN Protocol: Proposing settlement for escrow {task_id} via receipt submission")
-            settle_ok, tx_sig = await billing_service.settle_task_payment_onchain(
-                task_id, db_task.user_wallet, agent.creator_wallet, status == "completed", receipt_sig
-            )
+            # 8. Protocol Sequencing: Push to Settlement Mempool (V2 Frontier)
+            # We no longer settle directly from the worker.
+            # We push the task to a mempool for decentralized sequencing/relaying.
+            logger.info(f"VACN Protocol: Task {task_id} entering Settlement Mempool.")
+            await ctx['redis_queue'].redis.lpush("SETTLEMENT_MEMPOOL", task_id)
             
-            if settle_ok:
-                # Update status to verifying
-                db_task.status = "verifying"
-                db_task.settlement_signature = tx_sig
-                await db.commit()
-                await redis_pubsub.publish(f"task:{task_id}", json.dumps({"status": "verifying", "challenge_sig": tx_sig}))
+            # Update status to sequencing
+            db_task.status = "sequencing"
+            await db.commit()
+            await redis_pubsub.publish(f"task:{task_id}", json.dumps({"status": "sequencing", "mempool": "SETTLEMENT_MEMPOOL"}))
 
         except Exception as e:
             logger.error(f"Worker: Critical protocol error in task {task_id}: {e}", exc_info=True)
@@ -253,17 +251,46 @@ async def verify_execution_receipts(ctx):
                 )
                 
                 # 2. Compare Receipts
+                # The receipt now includes a TEE enclave signature: "hash:signature"
                 original_receipt = task.poae_hash
                 replay_receipt = replay_envelope["execution_receipt"]
                 
-                if original_receipt == replay_receipt:
+                original_hash = original_receipt.split(":")[0] if ":" in original_receipt else original_receipt
+                replay_hash = replay_receipt.split(":")[0] if ":" in replay_receipt else replay_receipt
+                
+                if original_hash == replay_hash:
                     logger.info(f"VERIFIER_NODE: Receipt verified for {task.id}. Honest execution.")
                     # In a real protocol, this would be a signed attestation from the verifier node
                 else:
                     logger.warning(f"VERIFIER_NODE: FRAUD DETECTED in task {task.id}! Receipt mismatch.")
-                    # Flag for slashing / dispute
                     task.status = "disputed"
-                    await db.commit()
+                    
+                    # Program C: Automatic Dispute Resolution
+                    from backend.modules.marketplace import service as market_service
+                    from backend.schemas.marketplace import DisputeCreate, DisputeResolve
+                    
+                    dispute = await market_service.create_dispute(
+                        db, 
+                        DisputeCreate(
+                            task_id=task.id, 
+                            reason="Verifier node detected receipt mismatch", 
+                            evidence={"original_receipt": original_receipt, "replay_receipt": replay_receipt}
+                        ), 
+                        "VERIFIER_NODE"
+                    )
+                    
+                    if dispute:
+                        await market_service.resolve_dispute(
+                            db,
+                            dispute.id,
+                            DisputeResolve(
+                                resolution="slash",
+                                resolution_details="Automatic slashing by Verifier Consensus"
+                            ),
+                            "VERIFIER_NODE"
+                        )
+                    else:
+                        await db.commit()
                     
             except Exception as e:
                 logger.error(f"VERIFIER_NODE: Audit failed for {task.id}: {e}")
@@ -312,6 +339,65 @@ async def process_market_matching(ctx):
         
         for order in orders:
             await engine.trigger_autonomous_bidding(db, order.id)
+
+async def process_settlement_mempool(ctx):
+    """
+    Decentralized Sequencer Worker: Processes receipts from the mempool.
+    In Phase 2, this is triggered by verifier attestations. 
+    Currently, it acts as the primary protocol relayer.
+    """
+    redis = ctx['redis_queue'].redis
+    task_id = await redis.rpop("SETTLEMENT_MEMPOOL")
+    
+    if not task_id:
+        return
+        
+    if isinstance(task_id, bytes):
+        task_id = task_id.decode()
+
+    logger.info(f"SEQUENCER: Processing task {task_id} from mempool.")
+    redis_pubsub = ctx['redis_pubsub']
+
+    async with AsyncSessionLocal() as db:
+        # 1. Load Task and Agent
+        task_res = await db.execute(select(Task).where(Task.id == task_id))
+        db_task = task_res.scalars().first()
+        
+        if not db_task or db_task.status != "sequencing":
+            logger.warning(f"SEQUENCER: Task {task_id} invalid for settlement (state: {db_task.status if db_task else 'None'})")
+            return
+
+        agent_res = await db.execute(select(Agent).where(Agent.id == db_task.agent_id))
+        agent = agent_res.scalars().first()
+        
+        if not agent:
+            logger.error(f"SEQUENCER: Agent {db_task.agent_id} not found for task {task_id}")
+            return
+
+        try:
+            # 2. Protocol Settlement: Propose outcome on-chain
+            logger.info(f"SEQUENCER: Submitting receipt for task {task_id} to Solana Escrow.")
+            settle_ok, tx_sig = await billing_service.settle_task_payment_onchain(
+                task_id, db_task.user_wallet, agent.creator_wallet, True, db_task.poae_hash
+            )
+            
+            if settle_ok:
+                # Update status to verifying (Challenge Period active)
+                db_task.status = "verifying"
+                db_task.settlement_signature = tx_sig
+                await db.commit()
+                await redis_pubsub.publish(f"task:{task_id}", json.dumps({
+                    "status": "verifying", 
+                    "challenge_sig": tx_sig,
+                    "sequencer": "shoujiki_relayer_01"
+                }))
+                logger.info(f"SEQUENCER: Task {task_id} settled on-chain. Sig: {tx_sig}")
+            else:
+                logger.error(f"SEQUENCER: On-chain settlement failed for task {task_id}: {tx_sig}")
+                # Optional: Push back to mempool or flag as stalled
+                
+        except Exception as e:
+            logger.error(f"SEQUENCER: Critical error settling task {task_id}: {e}")
 
 async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: dict):
     """
@@ -495,12 +581,14 @@ class WorkerSettings:
         finalize_vacn_settlements, 
         process_market_matching,
         run_agent_bidding_evaluation,
-        verify_execution_receipts
+        verify_execution_receipts,
+        process_settlement_mempool
     ]
     cron_jobs = [
         cron(finalize_vacn_settlements, minute=None, second=0), # Run every minute
         cron(process_market_matching, minute=None, second=30),  # Run every minute (offset by 30s)
-        cron(verify_execution_receipts, minute=None, second=15) # Run every minute (offset by 15s)
+        cron(verify_execution_receipts, minute=None, second=15), # Run every minute (offset by 15s)
+        cron(process_settlement_mempool, minute=None, second=45) # Run every minute (offset by 45s)
     ]
     redis_settings = RedisSettings(host=REDIS_QUEUE_HOST, port=REDIS_QUEUE_PORT, password=REDIS_PASSWORD)
     on_startup = startup
