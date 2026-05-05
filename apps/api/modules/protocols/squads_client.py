@@ -127,6 +127,16 @@ class SquadsClient:
             )
 
             async with AsyncClient(SOLANA_RPC_URL) as client:
+                # 1. Check if platform wallet is funded (Devnet Safety)
+                # We need enough for rent (~0.005 for multisig) + fees.
+                bal_resp = await client.get_balance(platform_keypair.pubkey())
+                if bal_resp.value < 10000000 and "devnet" in SOLANA_RPC_URL:
+                    logger.warning(
+                        f"SOLANA: Platform wallet {platform_keypair.pubkey()} balance ({bal_resp.value}) is too low for Squads on Devnet. "
+                        "Bypassing on-chain Squads deployment for development stability."
+                    )
+                    return str(multisig_pda)
+
                 acc_info = await client.get_account_info(multisig_pda)
                 if acc_info.value:
                     logger.info(
@@ -151,6 +161,21 @@ class SquadsClient:
             return str(multisig_pda)
 
         except Exception as e:
+            if any(
+                phrase in str(e)
+                for phrase in [
+                    "AccountNotFound",
+                    "debit an account",
+                    "simulation failed",
+                    "InstructionError",
+                ]
+            ):
+                logger.warning(
+                    f"SOLANA: Squads provisioning failed or bypassed: {e}. "
+                    f"Using deterministic PDA {multisig_pda} without on-chain initialization."
+                )
+                return str(multisig_pda)
+
             logger.error(f"VACN_SQUADS: Failed to deploy treasury for {agent_id}: {e}")
             return str(multisig_pda)
 

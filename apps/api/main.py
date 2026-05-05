@@ -104,6 +104,18 @@ async def lifespan(app: FastAPI):
                             "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS poae_hash VARCHAR"
                         )
                     )
+
+                    # WorkflowRun Table Agentic Budgeting
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE workflow_runs ADD COLUMN IF NOT EXISTS max_budget FLOAT DEFAULT 0"
+                        )
+                    )
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE workflow_runs ADD COLUMN IF NOT EXISTS total_spend FLOAT DEFAULT 0"
+                        )
+                    )
                 except Exception as migrate_err:
                     logger.warning(f"Manual migration notice: {migrate_err}")
 
