@@ -15,7 +15,6 @@ interface AgentCardProps {
     price: number;
     creator_wallet: string;
     mint_address?: string;
-    world_id_hash?: string;
     squads_vault_pda?: string;
     credential_registry_address?: string;
     total_runs?: number;
@@ -27,14 +26,13 @@ interface AgentCardProps {
   isWithdrawing?: boolean;
 }
 
-export const AgentCard = ({ agent, onDelete, isDeleting, onWithdraw, isWithdrawing }: AgentCardProps) => {
-  const getIdentityStatus = () => {
-    if (agent.world_id_hash) return { label: "Human Authenticated", color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
-    return { label: "Verified Node", color: 'text-zinc-400 bg-zinc-800/40 border-zinc-700/50' };
-  };
-
-  const identity = getIdentityStatus();
-
+export const AgentCard = ({
+  agent,
+  onDelete,
+  isDeleting,
+  onWithdraw,
+  isWithdrawing,
+}: AgentCardProps) => {
   return (
     <Card className="group relative flex flex-col h-full bg-[#0c0c0e] border-zinc-800/60 hover:border-zinc-700 transition-all duration-300">
       <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -48,16 +46,16 @@ export const AgentCard = ({ agent, onDelete, isDeleting, onWithdraw, isWithdrawi
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-             <div className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border shadow-sm", identity.color)}>
-                <Shield size={10} />
-                {identity.label}
-             </div>
-             {agent.squads_vault_pda && (
-               <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border border-purple-500/20 bg-purple-500/10 text-purple-400 shadow-sm">
-                  <Cpu size={10} />
-                  Sovereign Treasury
-               </div>
-             )}
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border text-zinc-400 bg-zinc-800/40 border-zinc-700/50 shadow-sm">
+              <Shield size={10} />
+              Verified Node
+            </div>
+            {agent.squads_vault_pda && (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border border-purple-500/20 bg-purple-500/10 text-purple-400 shadow-sm">
+                <Cpu size={10} />
+                Sovereign Treasury
+              </div>
+            )}
           </div>
         </div>
         <div className="text-right">

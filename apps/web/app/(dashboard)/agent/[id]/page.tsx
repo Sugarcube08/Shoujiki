@@ -182,8 +182,8 @@ export default function AgentRunPage() {
                 <span className="text-lg font-semibold text-white">{agent.price} SOL</span>
              </div>
              <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800/60">
-                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Identity Trust</span>
-                <span className="text-lg font-semibold text-white">{agent.world_id_hash ? 'Human' : 'Node'}</span>
+                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Compute Units</span>
+                <span className="text-lg font-semibold text-white">420 CU</span>
              </div>
           </div>
 

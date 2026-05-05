@@ -6,13 +6,6 @@ import { useWalletAuth } from '@/hooks/useWalletAuth';
 import { deployAgent } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import dynamic from 'next/dynamic';
-
-// Dynamically import IDKitWidget with SSR disabled
-const IDKitWidget = dynamic(
-  () => import('@worldcoin/idkit').then((mod) => mod.IDKitWidget),
-  { ssr: false }
-);
 
 import {
   Rocket,
@@ -20,15 +13,10 @@ import {
   Loader2,
   ArrowLeft,
   Bot,
-  Cpu,
-  UserCheck
+  Cpu
 } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { cn } from '@/lib/utils';
-// Note: VerificationLevel and ISuccessResult are used as types/enums. 
-// If they fail to import from @worldcoin/idkit, we can define them locally or use 'any'.
-import type { ISuccessResult } from '@worldcoin/idkit';
-import { VerificationLevel } from '@worldcoin/idkit';
 
 
 export default function DeploySpacePage() {
@@ -39,7 +27,6 @@ export default function DeploySpacePage() {
   const [status, setStatus] = useState<'idle' | 'validating' | 'minting' | 'done'>('idle');
   const [error, setError] = useState('');
   const [deployedAgent, setDeployedAgent] = useState<any>(null);
-  const [worldIdProof, setWorldIdProof] = useState<ISuccessResult | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -59,13 +46,7 @@ export default function DeploySpacePage() {
     setStatus('validating');
 
     try {
-      // Inject World ID proof into the deployment data
-      const deploymentData = {
-        ...draft,
-        world_id_proof: worldIdProof
-      };
-
-      const res = await deployAgent(deploymentData);
+      const res = await deployAgent(draft);
       setStatus('minting');
       setDeployedAgent(res);
       localStorage.removeItem('shoujiki_draft');
@@ -79,10 +60,6 @@ export default function DeploySpacePage() {
       setError(err.response?.data?.detail || err.message || 'Deployment failed');
       setStatus('idle');
     }
-  };
-
-  const handleWorldIdSuccess = (result: ISuccessResult) => {
-    setWorldIdProof(result);
   };
 
   if (!draft) return (
@@ -181,33 +158,6 @@ export default function DeploySpacePage() {
                     ))}
                   </div>
                 </div>
-
-                {/* World ID Widget */}
-                <div className="pt-6 border-t border-zinc-800/60">
-                  <IDKitWidget
-                    app_id="app_agentos_staging"
-                    action="mint_agent_passport"
-                    onSuccess={handleWorldIdSuccess}
-                    verification_level={VerificationLevel.Device}
-                  >
-                    {({ open }: any) => (
-                      <Button
-                        variant="outline"
-                        onClick={open}
-                        className={cn(
-                          "w-full h-12 rounded-xl border-zinc-800 gap-3 text-xs font-bold uppercase tracking-widest",
-                          worldIdProof ? "border-green-500/50 text-green-500 bg-green-500/5" : "text-zinc-400 hover:text-white"
-                        )}
-                      >
-                        {worldIdProof ? (
-                          <><CheckCircle2 size={16} /> Human Verified</>
-                        ) : (
-                          <><UserCheck size={16} /> Verify Personhood</>
-                        )}
-                      </Button>
-                    )}
-                  </IDKitWidget>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -243,17 +193,12 @@ export default function DeploySpacePage() {
                   <Button
                     className="w-full h-14 rounded-xl font-bold text-sm tracking-widest uppercase shadow-xl"
                     onClick={handleConfirmDeploy}
-                    disabled={status !== 'idle' || !connected || (!worldIdProof && process.env.NODE_ENV === 'production')}
+                    disabled={status !== 'idle' || !connected}
                     isLoading={status !== 'idle'}
                   >
                     <Rocket size={18} />
                     Initialize Launch Sequence
                   </Button>
-                  {!worldIdProof && (
-                    <p className="text-center text-[10px] font-bold text-zinc-600 uppercase mt-4 tracking-tighter">
-                      World ID Verification Recommended for Sybil Resistance
-                    </p>
-                  )}
                 </div>
               </CardContent>
             </Card>
