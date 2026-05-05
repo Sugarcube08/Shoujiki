@@ -46,9 +46,6 @@ class Agent(Base):
     total_earnings = Column(Float, nullable=False, default=0.0)
 
     # Protocol Integration Fields (AgentOS Level-Up)
-    world_id_hash = Column(
-        String, nullable=True
-    )  # World ID: Proof of human for creator
     squads_vault_pda = Column(
         String, nullable=True
     )  # Squads V4: Agent's sovereign treasury

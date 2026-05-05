@@ -22,7 +22,6 @@ class AgentCreate(AgentBase):
     requirements: List[str]
     entrypoint: str
     version: str = "v1"
-    world_id_proof: Optional[dict] = None
 
 
 class AgentTestRequest(BaseModel):
@@ -44,7 +43,6 @@ class AgentResponse(AgentBase):
     successful_runs: int
 
     # AgentOS Protocol Fields
-    world_id_hash: Optional[str] = None
     squads_vault_pda: Optional[str] = None
     credential_registry_address: Optional[str] = None
 

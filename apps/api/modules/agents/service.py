@@ -3,13 +3,11 @@ from sqlalchemy.future import select
 from backend.db.models.models import Agent
 from backend.schemas.agent import AgentCreate
 from backend.modules.protocols.squads_client import SquadsClient
-from backend.modules.protocols.world_id_client import WorldIDClient
 import logging
 
 logger = logging.getLogger(__name__)
 
 squads_client = SquadsClient()
-world_id_client = WorldIDClient()
 
 
 async def create_agent(db: AsyncSession, agent_data: AgentCreate, creator_wallet: str):
@@ -45,19 +43,12 @@ async def create_agent(db: AsyncSession, agent_data: AgentCreate, creator_wallet
     else:
         # VACN Protocol: Identity & Treasury Provisioning
 
-        # 1. World ID: Verify creator provenance (Proof of Human)
-        # We pass the real ZKP from the frontend to the verification API
-        verification_data = agent_data.world_id_proof or {}
-        world_id_hash = await world_id_client.verify_human_creator(
-            creator_wallet, verification_data
-        )
-
-        # 2. Squads V4: Deploy Sovereign Agent Treasury
+        # 1. Squads V4: Deploy Sovereign Agent Treasury
         squads_pda = await squads_client.deploy_agent_treasury(
             agent_data.id, creator_wallet
         )
 
-        # 3. Metaplex Core: Mint Agent Passport (Identity Asset)
+        # 2. Metaplex Core: Mint Agent Passport (Identity Asset)
         from solders.keypair import Keypair
         from solders.instruction import Instruction, AccountMeta
         from solders.transaction import VersionedTransaction
@@ -144,7 +135,6 @@ async def create_agent(db: AsyncSession, agent_data: AgentCreate, creator_wallet
             creator_wallet=creator_wallet,
             mint_address=mint_address,
             squads_vault_pda=squads_pda,
-            world_id_hash=world_id_hash,
         )
         db.add(db_agent)
 

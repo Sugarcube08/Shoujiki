@@ -214,7 +214,7 @@ async def run_agent_task(
             # We no longer settle directly from the worker.
             # We push the task to a mempool for decentralized sequencing/relaying.
             logger.info(f"VACN Protocol: Task {task_id} entering Settlement Mempool.")
-            await ctx["redis_queue"].redis.lpush("SETTLEMENT_MEMPOOL", task_id)
+            await ctx["redis_queue"].lpush("SETTLEMENT_MEMPOOL", task_id)
 
             # Update status to sequencing
             db_task.status = "sequencing"
@@ -470,7 +470,7 @@ async def process_settlement_mempool(ctx):
     In Phase 2, this is triggered by verifier attestations.
     Currently, it acts as the primary protocol relayer.
     """
-    redis = ctx["redis_queue"].redis
+    redis = ctx["redis_queue"]
     task_id = await redis.rpop("SETTLEMENT_MEMPOOL")
 
     if not task_id:
@@ -610,7 +610,7 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
             )
 
             # Check if currently being executed (not yet completed but enqueued)
-            in_flight = await ctx["redis_queue"].redis.get(
+            in_flight = await ctx["redis_queue"].get(
                 f"wf_flight:{run_id}:{step_id}"
             )
 
@@ -645,7 +645,7 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
             for step in ready_steps:
                 step_id = step.get("id")
                 # Mark as in-flight
-                await ctx["redis_queue"].redis.setex(
+                await ctx["redis_queue"].setex(
                     f"wf_flight:{run_id}:{step_id}", 300, "1"
                 )
 
@@ -780,7 +780,7 @@ async def run_workflow_step_task(
             await db.commit()
 
             # 4. Trigger Orchestrator to check for next ready steps
-            await ctx["redis_queue"].redis.delete(f"wf_flight:{run_id}:{step_id}")
+            await ctx["redis_queue"].delete(f"wf_flight:{run_id}:{step_id}")
             await ctx["redis_queue"].enqueue_job(
                 "run_workflow_task",
                 run_id=run_id,
@@ -792,7 +792,7 @@ async def run_workflow_step_task(
             logger.error(f"SWARM_OS: Node {step_id} failed: {e}")
             db_run.status = "failed"
             await db.commit()
-            await ctx["redis_queue"].redis.delete(f"wf_flight:{run_id}:{step_id}")
+            await ctx["redis_queue"].delete(f"wf_flight:{run_id}:{step_id}")
             await redis_pubsub.publish(
                 f"workflow:{run_id}",
                 json.dumps({"status": "failed", "error": str(e), "step_id": step_id}),

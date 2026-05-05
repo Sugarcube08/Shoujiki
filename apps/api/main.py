@@ -69,11 +69,6 @@ async def lifespan(app: FastAPI):
                     # Agent Table Protocol Fields
                     await conn.execute(
                         text(
-                            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS world_id_hash VARCHAR"
-                        )
-                    )
-                    await conn.execute(
-                        text(
                             "ALTER TABLE agents ADD COLUMN IF NOT EXISTS squads_vault_pda VARCHAR"
                         )
                     )
