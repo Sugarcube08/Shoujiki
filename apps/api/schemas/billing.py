@@ -14,3 +14,14 @@ class UserWalletResponse(BaseModel):
 
 class DepositRequest(BaseModel):
     amount: float
+    transaction_signature: str
+
+
+class WithdrawRequest(BaseModel):
+    amount: float
+
+
+class TransactionResponse(BaseModel):
+    message: str
+    tx_signature: str
+    new_balance: float

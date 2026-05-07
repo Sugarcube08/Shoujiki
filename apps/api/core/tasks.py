@@ -850,4 +850,3 @@ class WorkerSettings:
     )
     on_startup = startup
     on_shutdown = shutdown
-own

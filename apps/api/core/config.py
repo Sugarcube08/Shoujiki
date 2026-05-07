@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import hashlib
 from dotenv import load_dotenv
 
 # Load .env file relative to this file's directory (works in Docker and local)
@@ -9,7 +10,6 @@ if env_path.exists():
 
 # Ensure the seed is exactly 32 bytes for Solana keypair generation
 _raw_seed = os.getenv("PLATFORM_SECRET_SEED", "shoujiki_platform_master_seed_32")
-import hashlib
 PLATFORM_SECRET_SEED_BYTES = hashlib.sha256(_raw_seed.encode()).digest()
 PLATFORM_SECRET_SEED = _raw_seed # Keep original for non-keypair uses if any
 

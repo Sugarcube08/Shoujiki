@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getAgent, runAgent, getConfig } from '@/lib/api';
+import { getAgent, runAgent, getConfig, getMyAppWallet } from '@/lib/api';
 import { setPlatformWallet, createEscrowTransaction, confirmTx } from '@/lib/solana';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
@@ -11,7 +11,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { 
   Loader2, ArrowLeft, Play, Terminal, 
   AlertCircle, BadgeCheck, Cpu, Activity, Lock, 
-  CheckCircle2, Fingerprint, Coins
+  CheckCircle2, Fingerprint, Coins, Wallet
 } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { cn, truncateWallet } from '@/lib/utils';
@@ -26,6 +26,7 @@ export default function AgentRunPage() {
   const { isAuthenticated, login, connected, publicKey } = useWalletAuth();
 
   const [agent, setAgent] = useState<any>(null);
+  const [appWallet, setAppWallet] = useState<any>(null);
   const [inputData, setInputData] = useState('{"prompt": "Hello"}');
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<'idle' | 'signing' | 'funding' | 'executing' | 'done'>('idle');
@@ -35,11 +36,13 @@ export default function AgentRunPage() {
 
   const fetchState = async () => {
     try {
-      const [agentData, config] = await Promise.all([
+      const [agentData, config, walletData] = await Promise.all([
         getAgent(id as string),
-        getConfig()
+        getConfig(),
+        isAuthenticated ? getMyAppWallet() : Promise.resolve(null)
       ]);
       setAgent(agentData);
+      setAppWallet(walletData);
       if (config.platform_wallet) {
         setPlatformWallet(config.platform_wallet);
       }
@@ -76,41 +79,53 @@ export default function AgentRunPage() {
       
       addLog("Waiting for SVM authorization signature...");
       const sigBytes = await signMessage(payloadBytes);
-      const sigBase64 = Buffer.from(sigBytes).toString('base64');
+      const x402Sig = Buffer.from(sigBytes).toString('base64');
       addLog("Identity verified.");
 
-      // 2. On-chain Escrow Funding
-      setStatus('funding');
-      addLog(`Initializing on-chain escrow for ${agent.price} SOL...`);
-      
-      const { tx, reference } = await createEscrowTransaction(
-        publicKey,
-        new PublicKey(agent.creator_wallet),
-        taskId,
-        agent.price
-      );
+      let paymentType = "app_wallet";
+      let txSig = "";
+      let referenceStr = "";
 
-      const txSig = await sendTransaction(tx, connection);
-      addLog(`Transaction sent: ${txSig.slice(0, 8)}...`);
-      addLog("Waiting for network confirmation...");
-      
-      await confirmTx(connection, txSig);
-      addLog("Escrow funded and verified on Solana.");
+      // 2. Billing Selection: Use App Wallet if funded, otherwise Escrow
+      if (appWallet && appWallet.balance >= agent.price) {
+        addLog("Using internal App Wallet (Layer 2) for instant execution.");
+        paymentType = "app_wallet";
+      } else {
+        setStatus('funding');
+        addLog(`App Wallet low. Initializing on-chain escrow for ${agent.price} SOL...`);
+        
+        const escrow = await createEscrowTransaction(
+          publicKey,
+          new PublicKey(agent.creator_wallet),
+          taskId,
+          agent.price
+        );
+
+        txSig = await sendTransaction(escrow.tx, connection);
+        referenceStr = escrow.reference.toBase58();
+
+        addLog(`Transaction sent: ${txSig.slice(0, 8)}...`);
+        addLog("Waiting for network confirmation...");
+        
+        await confirmTx(connection, txSig);
+        addLog("Escrow funded and verified on Solana.");
+        paymentType = "escrow";
+      }
 
       // 3. Trigger API Execution
       setStatus('executing');
-      addLog("Relaying proof of funding to VACN nodes...");
+      addLog("Relaying execution request to VACN nodes...");
 
       await runAgent(
         agent.id, 
         runBody.input_data, 
         taskId, 
-        reference.toBase58(), 
-        "escrow", 
+        referenceStr, 
+        paymentType, 
         txSig, 
         publicKey.toBase58(), 
         txSig, 
-        sigBase64, 
+        x402Sig, 
         publicKey.toBase58()
       );
 
@@ -181,9 +196,14 @@ export default function AgentRunPage() {
                 <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Execution Fee</span>
                 <span className="text-lg font-semibold text-white">{agent.price} SOL</span>
              </div>
-             <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800/60">
-                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Compute Units</span>
-                <span className="text-lg font-semibold text-white">420 CU</span>
+             <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800/60 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                   <Wallet size={32} />
+                </div>
+                <span className="text-[10px] font-bold text-purple-500 uppercase tracking-widest block mb-1">App Wallet Balance</span>
+                <span className="text-lg font-semibold text-white">
+                   {appWallet?.balance?.toFixed(4) || '0.0000'} <span className="text-xs text-zinc-500 font-medium">SOL</span>
+                </span>
              </div>
           </div>
 
