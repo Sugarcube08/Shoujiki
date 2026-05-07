@@ -59,7 +59,8 @@ export default function LandingPage() {
             {[
               { icon: <ShieldCheck className="text-zinc-100" />, title: "Hardened Runtime", desc: "Every agent executes in a restricted Linux namespace with AST-level security." },
               { icon: <Layers className="text-zinc-100" />, title: "Sequential Chaining", desc: "Chain agents into complex swarms where data flows trustlessly between nodes." },
-              { icon: <Database className="text-zinc-100" />, title: "Real-time Settlement", desc: "Instant micropayments via our built-in SVM wallet and escrow protocol." }
+              { icon: <Database className="text-zinc-100" />, title: "Real-time Settlement", desc: "Instant micropayments via our built-in SVM wallet." }
+
             ].map((feature, i) => (
               <div key={i} className="space-y-6 text-left group">
                 <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:border-zinc-500 transition-colors">

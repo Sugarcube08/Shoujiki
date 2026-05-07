@@ -7,9 +7,6 @@ class RunRequest(BaseModel):
     agent_id: str
     task_id: str
     input_data: dict
-    payment_type: str = "app_wallet"  # "app_wallet" or "escrow"
-    signature: Optional[str] = None   # transaction signature for escrow
-    reference: Optional[str] = None   # optional reference for escrow
 
 
 class TaskResponse(BaseModel):

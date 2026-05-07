@@ -99,16 +99,37 @@ async def lifespan(app: FastAPI):
                     )
                     await conn.execute(
                         text(
-                            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS env_vars JSON DEFAULT '{}'"
+                            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS price_per_million_input_tokens FLOAT DEFAULT 0.01"
                         )
                     )
-
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS price_per_million_output_tokens FLOAT DEFAULT 0.05"
+                        )
+                    )
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS total_runs FLOAT DEFAULT 0"
+                        )
+                    )
+                    ...
                     # Task Table Protocol Fields
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS input_tokens FLOAT DEFAULT 0"
+                        )
+                    )
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS output_tokens FLOAT DEFAULT 0"
+                        )
+                    )
                     await conn.execute(
                         text(
                             "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS poae_hash VARCHAR"
                         )
                     )
+
 
                     # WorkflowRun Table Agentic Budgeting
                     await conn.execute(

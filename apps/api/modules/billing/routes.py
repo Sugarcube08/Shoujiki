@@ -77,7 +77,6 @@ async def get_billing_config():
     """Returns protocol-level billing configuration."""
     return {
         "platform_wallet": billing_service.PLATFORM_WALLET,
-        "escrow_program_id": str(billing_service.ESCROW_PROGRAM_ID),
     }
 
 

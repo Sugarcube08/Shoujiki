@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getAgent, runAgent, getConfig, getMyAppWallet } from '@/lib/api';
-import { setPlatformWallet, createEscrowTransaction, confirmTx } from '@/lib/solana';
+import { setPlatformWallet } from '@/lib/solana';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
 import { Button } from '@/components/ui/Button';
@@ -82,35 +82,12 @@ export default function AgentRunPage() {
       const x402Sig = Buffer.from(sigBytes).toString('base64');
       addLog("Identity verified.");
 
-      let paymentType = "app_wallet";
-      let txSig = "";
-      let referenceStr = "";
-
-      // 2. Billing Selection: Use App Wallet if funded, otherwise Escrow
-      if (appWallet && appWallet.balance >= agent.price) {
-        addLog("Using internal App Wallet (Layer 2) for instant execution.");
-        paymentType = "app_wallet";
-      } else {
-        setStatus('funding');
-        addLog(`App Wallet low. Initializing on-chain escrow for ${agent.price} SOL...`);
-        
-        const escrow = await createEscrowTransaction(
-          publicKey,
-          new PublicKey(agent.creator_wallet),
-          taskId,
-          agent.price
-        );
-
-        txSig = await sendTransaction(escrow.tx, connection);
-        referenceStr = escrow.reference.toBase58();
-
-        addLog(`Transaction sent: ${txSig.slice(0, 8)}...`);
-        addLog("Waiting for network confirmation...");
-        
-        await confirmTx(connection, txSig);
-        addLog("Escrow funded and verified on Solana.");
-        paymentType = "escrow";
+      // 2. Billing Selection: Use App Wallet
+      if (!appWallet || appWallet.balance < agent.price) {
+        throw new Error(`Insufficient App Wallet balance. Required: ${agent.price} SOL. Please deposit more funds.`);
       }
+      
+      addLog("Using internal App Wallet (Layer 2) for instant execution.");
 
       // 3. Trigger API Execution
       setStatus('executing');
@@ -120,11 +97,6 @@ export default function AgentRunPage() {
         agent.id, 
         runBody.input_data, 
         taskId, 
-        referenceStr, 
-        paymentType, 
-        txSig, 
-        publicKey.toBase58(), 
-        txSig, 
         x402Sig, 
         publicKey.toBase58()
       );
@@ -147,7 +119,6 @@ export default function AgentRunPage() {
             addLog("Result finalized.");
             if (data.receipt_hash) {
               addLog(`Deterministic Execution Receipt: ${data.receipt_hash.slice(0, 16)}...`);
-              addLog("Status: Settling on-chain via Escrow.");
             }
           }
           ws.close();

@@ -65,11 +65,6 @@ export const runAgent = async (
   agentId: string, 
   inputData: any, 
   taskId: string, 
-  reference: string, 
-  paymentType: string, 
-  signature: string, 
-  userWallet: string,
-  txSignature: string,
   x402Sig?: string,
   x402Pubkey?: string
 ) => {
@@ -83,9 +78,6 @@ export const runAgent = async (
     agent_id: agentId,
     input_data: inputData,
     task_id: taskId,
-    reference,
-    payment_type: paymentType,
-    signature: txSignature 
   }, { headers });
   return response.data;
 };

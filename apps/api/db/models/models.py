@@ -31,7 +31,11 @@ class Agent(Base):
         JSON, nullable=False, default=[]
     )  # List of {version, files, requirements, entrypoint}
     current_version = Column(String, nullable=False, default="v1")
-    price = Column(Float, nullable=False)
+    
+    # Token-based Pricing (SOL per 1M tokens)
+    price_per_million_input_tokens = Column(Float, nullable=False, default=0.01)
+    price_per_million_output_tokens = Column(Float, nullable=False, default=0.05)
+
     creator_wallet = Column(String, nullable=False, index=True)
     mint_address = Column(
         String, nullable=True, index=True
@@ -72,8 +76,11 @@ class Task(Base):
     )  # queued, running, completed, failed, settled
     depth = Column(Float, default=0)
 
+    # Token Usage
+    input_tokens = Column(Float, default=0)
+    output_tokens = Column(Float, default=0)
+
     # Protocol Fields
-    escrow_pda = Column(String, nullable=True)
     settlement_signature = Column(String, nullable=True)
     execution_receipt = Column(JSON, nullable=True)
     poae_hash = Column(String, nullable=True)  # Proof of Autonomous Execution (VACN)

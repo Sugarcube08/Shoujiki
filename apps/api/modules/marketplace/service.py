@@ -146,7 +146,8 @@ async def resolve_dispute(
 
     if task:
         if resolution_data.resolution == "refund":
-            # In a real on-chain implementation, we would call a refund instruction on the escrow program
+            # Refund logic: Reverse the L2 credit/debit
+            # In a production system, we would call treasury_service.refund_agentic_fee
             task.status = "refunded"
             logger.info(
                 f"MARKET: Task {task.id} refunded to {task.user_wallet} due to dispute {dispute_id}"

@@ -58,8 +58,8 @@ This extends proof concepts beyond transactions.
 
 # Protocol Architecture
 
-## Layer 0 — Settlement Base (Solana)
-Economic settlement, receipt anchoring, staking logic, slashing conditions, and dispute settlement.
+## Layer 0 — Settlement Base (Solana & L2 Ledger)
+Economic settlement is managed via a high-performance DB-backed Layer 2 ledger for instant micropayments, anchored by the Master Platform Authority Wallet on Solana. Supports receipts, staking logic, and future on-chain finality.
 
 ## Layer 1 — Verifiable Compute Layer (The Core)
 Executor Nodes perform workloads using deterministic WASM, TEEs, or confidential compute (e.g., Arcium). They produce execution artifacts and emit proofs.

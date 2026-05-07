@@ -13,7 +13,8 @@ class AgentVersion(BaseModel):
 class AgentBase(BaseModel):
     name: str = Field(default="")
     description: Optional[str] = None
-    price: float = Field(default=0.0)
+    price_per_million_input_tokens: float = Field(default=0.01)
+    price_per_million_output_tokens: float = Field(default=0.05)
     env_vars: Optional[Dict[str, str]] = Field(default_factory=dict)
 
 

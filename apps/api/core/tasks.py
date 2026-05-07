@@ -70,38 +70,32 @@ async def run_agent_task(
             return
 
         # 2. Protocol Security: Verify Funds (Agentic Billing)
-        # We first check the internal App Wallet.
-        # On-chain Escrow is now a secondary fallback or used for high-value settlement.
+        # We check the internal App Wallet for a minimum baseline solvency.
         from backend.modules.billing import treasury_service
 
         is_solvent = await treasury_service.check_user_solvency(
-            db, db_task.user_wallet, agent.price
+            db, db_task.user_wallet, 0.001 # Baseline check to start execution
         )
 
         if not is_solvent:
-            # Fallback: Check if there's an on-chain escrow specifically for this task
-            escrow_ok, detail = await billing_service.verify_escrow_funded(
-                task_id, agent.price
+            logger.warning(
+                f"Worker: Task {task_id} aborted - Insufficient internal funds."
             )
-            if not escrow_ok:
-                logger.warning(
-                    f"Worker: Task {task_id} aborted - Insufficient internal funds and no Escrow found."
-                )
-                db_task.status = "failed"
-                db_task.result = (
-                    "Insufficient funds in App Wallet and no on-chain escrow detected."
-                )
-                await db.commit()
-                await redis_pubsub.publish(
-                    f"task:{task_id}",
-                    json.dumps(
-                        {
-                            "status": "failed",
-                            "error": "Insufficient funds. Please top up your App Wallet or initialize an escrow.",
-                        }
-                    ),
-                )
-                return
+            db_task.status = "failed"
+            db_task.result = (
+                "Insufficient funds in App Wallet. Please top up."
+            )
+            await db.commit()
+            await redis_pubsub.publish(
+                f"task:{task_id}",
+                json.dumps(
+                    {
+                        "status": "failed",
+                        "error": "Insufficient funds. Please top up your App Wallet.",
+                    }
+                ),
+            )
+            return
 
         # 3. Update to 'running'
         db_task.status = "running"
@@ -133,9 +127,12 @@ async def run_agent_task(
             status = "completed" if exec_result.get("status") == "success" else "failed"
             result_data = exec_result.get("data", "")
 
-            # Extract dynamic cost from agentic usage info
+            # Extract dynamic cost from agentic usage info or calculate from tokens
             usage = exec_result.get("usage", {})
-            actual_cost = usage.get("cost_sol", agent.price)
+            
+            # Simple token estimation if usage doesn't provide it
+            input_tokens = usage.get("input_tokens", len(str(input_data)) // 4)
+            output_tokens = usage.get("output_tokens", len(str(result_data)) // 4)
 
             # 5. Generate Protocol Receipt
             receipt_metadata = {
@@ -146,10 +143,12 @@ async def run_agent_task(
                 ).hexdigest(),
                 "execution_receipt": receipt_sig,
                 "usage": usage,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
                 "timestamp": str(asyncio.get_event_loop().time()),
             }
 
-            # 6. Update Task with Receipt
+            # 6. Update Task with Receipt and Token Usage
             await db.execute(
                 update(Task)
                 .where(Task.id == task_id)
@@ -158,16 +157,19 @@ async def run_agent_task(
                     result=json.dumps(result_data),
                     execution_receipt=receipt_metadata,
                     poae_hash=receipt_sig,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
                 )
             )
 
             # Update Agent Execution Stats
             agent.total_runs += 1
+            actual_cost = 0.0
             if status == "completed":
                 agent.successful_runs += 1
-                # 7. Agentic Settlement: Deduct from User, Credit Agent
-                await treasury_service.deduct_agentic_fee(
-                    db, db_task.user_wallet, agent.id, actual_cost
+                # 7. Agentic Settlement: Deduct from User based on tokens
+                actual_cost = await treasury_service.deduct_agentic_fee(
+                    db, db_task.user_wallet, agent.id, input_tokens, output_tokens
                 )
 
             await db.commit()
@@ -179,6 +181,7 @@ async def run_agent_task(
                         "result": result_data,
                         "receipt_hash": receipt_sig,
                         "cost_deducted": actual_cost,
+                        "tokens": {"in": input_tokens, "out": output_tokens}
                     }
                 ),
             )
@@ -190,20 +193,15 @@ async def run_agent_task(
                 hired_input = hire.get("input_data")
                 new_task_id = f"m2m_{task_id[:8]}_{uuid.uuid4().hex[:6]}"
 
-                if agent.squads_vault_pda:
-                    signed_ok = await squads_client.sign_m2m_escrow(
-                        agent.squads_vault_pda, hired_id, 0.01
-                    )
-                    if signed_ok:
-                        await ctx["redis_queue"].enqueue_job(
-                            "run_agent_task",
-                            task_id=new_task_id,
-                            agent_id=hired_id,
-                            input_data=hired_input,
-                            creator_wallet=agent.creator_wallet,
-                            price=0.01,
-                            depth=depth + 1,
-                        )
+                await ctx["redis_queue"].enqueue_job(
+                    "run_agent_task",
+                    task_id=new_task_id,
+                    agent_id=hired_id,
+                    input_data=hired_input,
+                    creator_wallet=agent.creator_wallet,
+                    price=0.01, # Pass placeholder for legacy compatibility if needed
+                    depth=depth + 1,
+                )
 
             # 7. Protocol Verification: Oracle verification
             logger.info(
@@ -211,18 +209,12 @@ async def run_agent_task(
             )
             await switchboard_client.create_verification_request(task_id, receipt_sig)
 
-            # 8. Protocol Sequencing: Push to Settlement Mempool (V2 Frontier)
-            # We no longer settle directly from the worker.
-            # We push the task to a mempool for decentralized sequencing/relaying.
-            logger.info(f"VACN Protocol: Task {task_id} entering Settlement Mempool.")
-            await ctx["redis_queue"].lpush("SETTLEMENT_MEMPOOL", task_id)
-
-            # Update status to sequencing
-            db_task.status = "sequencing"
+            # 8. Finalize Task Status
+            db_task.status = "settled"
             await db.commit()
             await redis_pubsub.publish(
                 f"task:{task_id}",
-                json.dumps({"status": "sequencing", "mempool": "SETTLEMENT_MEMPOOL"}),
+                json.dumps({"status": "settled"}),
             )
 
         except Exception as e:
@@ -415,37 +407,6 @@ async def verify_execution_receipts(ctx):
                 logger.error(f"VERIFIER_NODE: Audit failed for {task.id}: {e}")
 
 
-async def finalize_vacn_settlements(ctx):
-    """
-    Cron-like task to finalize optimistic settlements.
-    In Phase 3, this moves tasks from 'verifying' to 'settled'.
-    """
-    logger.info("VACN_FINALIZER: Scanning for matured challenge periods...")
-    async with AsyncSessionLocal() as db:
-        # Find tasks in 'verifying' status
-        res = await db.execute(select(Task).where(Task.status == "verifying"))
-        matured_tasks = res.scalars().all()
-
-        for task in matured_tasks:
-            logger.info(f"VACN_FINALIZER: Finalizing task {task.id}")
-
-            # Protocol Call: Finalize on-chain
-            agent_res = await db.execute(select(Agent).where(Agent.id == task.agent_id))
-            agent = agent_res.scalars().first()
-
-            if agent:
-                ok, tx_sig = await billing_service.finalize_task_settlement(
-                    task.id, task.user_wallet, agent.creator_wallet
-                )
-                if ok:
-                    task.status = "settled"
-                    task.settlement_signature = tx_sig
-                    await db.commit()
-                    logger.info(
-                        f"VACN_FINALIZER: Task {task.id} finalized. Sig: {tx_sig}"
-                    )
-
-
 async def process_market_matching(ctx):
     """
     Cron-like task to run the Labor Market Matching Engine.
@@ -465,86 +426,8 @@ async def process_market_matching(ctx):
             await engine.trigger_autonomous_bidding(db, order.id)
 
 
-async def process_settlement_mempool(ctx):
-    """
-    Decentralized Sequencer Worker: Processes receipts from the mempool.
-    In Phase 2, this is triggered by verifier attestations.
-    Currently, it acts as the primary protocol relayer.
-    """
-    redis = ctx["redis_queue"]
-    task_id = await redis.rpop("SETTLEMENT_MEMPOOL")
-
-    if not task_id:
-        return
-
-    if isinstance(task_id, bytes):
-        task_id = task_id.decode()
-
-    logger.info(f"SEQUENCER: Processing task {task_id} from mempool.")
-    redis_pubsub = ctx["redis_pubsub"]
-
-    async with AsyncSessionLocal() as db:
-        # 1. Load Task and Agent
-        task_res = await db.execute(select(Task).where(Task.id == task_id))
-        db_task = task_res.scalars().first()
-
-        if not db_task or db_task.status != "sequencing":
-            logger.warning(
-                f"SEQUENCER: Task {task_id} invalid for settlement (state: {db_task.status if db_task else 'None'})"
-            )
-            return
-
-        agent_res = await db.execute(select(Agent).where(Agent.id == db_task.agent_id))
-        agent = agent_res.scalars().first()
-
-        if not agent:
-            logger.error(
-                f"SEQUENCER: Agent {db_task.agent_id} not found for task {task_id}"
-            )
-            return
-
-        try:
-            # 2. Protocol Settlement: Propose outcome on-chain
-            logger.info(
-                f"SEQUENCER: Submitting receipt for task {task_id} to Solana Escrow."
-            )
-            settle_ok, tx_sig = await billing_service.settle_task_payment_onchain(
-                task_id,
-                db_task.user_wallet,
-                agent.creator_wallet,
-                True,
-                db_task.poae_hash,
-            )
-
-            if settle_ok:
-                # Update status to verifying (Challenge Period active)
-                db_task.status = "verifying"
-                db_task.settlement_signature = tx_sig
-                await db.commit()
-                await redis_pubsub.publish(
-                    f"task:{task_id}",
-                    json.dumps(
-                        {
-                            "status": "verifying",
-                            "challenge_sig": tx_sig,
-                            "sequencer": "shoujiki_relayer_01",
-                        }
-                    ),
-                )
-                logger.info(
-                    f"SEQUENCER: Task {task_id} settled on-chain. Sig: {tx_sig}"
-                )
-            else:
-                logger.error(
-                    f"SEQUENCER: On-chain settlement failed for task {task_id}: {tx_sig}"
-                )
-                # Optional: Push back to mempool or flag as stalled
-
-        except Exception as e:
-            logger.error(f"SEQUENCER: Critical error settling task {task_id}: {e}")
-
-
 async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: dict):
+
     """
     Swarm OS Orchestrator (Layer 3): Manages a DAG of agents.
     Dispatches independent steps in parallel and tracks dependency resolution.
@@ -616,29 +499,6 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
             )
 
             if deps_satisfied and not in_flight:
-                # 3. atMax Budget Guard: Check if next step fits in budget
-                # We look up the agent's price to see if we can afford to start it
-                agent_id = step.get("agent_id")
-                agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
-                agent = agent_res.scalars().first()
-
-                if agent and (db_run.total_spend + agent.price) > db_run.max_budget:
-                    logger.warning(
-                        f"SWARM_OS: Budget exhausted for run {run_id}. Halting."
-                    )
-                    db_run.status = "failed"
-                    await db.commit()
-                    await redis_pubsub.publish(
-                        f"workflow:{run_id}",
-                        json.dumps(
-                            {
-                                "status": "failed",
-                                "error": f"atMax Budget exhausted ({db_run.max_budget} SOL hit). Halting swarm.",
-                            }
-                        ),
-                    )
-                    return
-
                 ready_steps.append(step)
 
         # 3. Dispatch Ready Steps
@@ -745,13 +605,16 @@ async def run_workflow_step_task(
             # 3. Commit Step Completion
             step_output = exec_result.get("data", "")
             usage = exec_result.get("usage", {})
-            actual_cost = usage.get("cost_sol", agent.price)
+            
+            # Simple token estimation
+            input_tokens = usage.get("input_tokens", len(str(step_input)) // 4)
+            output_tokens = usage.get("output_tokens", len(str(step_output)) // 4)
 
             # Agentic Billing: Deduct and update swarm spend
             from backend.modules.billing import treasury_service
 
-            await treasury_service.deduct_agentic_fee(
-                db, db_run.user_wallet, agent.id, actual_cost
+            actual_cost = await treasury_service.deduct_agentic_fee(
+                db, db_run.user_wallet, agent.id, input_tokens, output_tokens
             )
             db_run.total_spend += actual_cost
 
@@ -762,6 +625,8 @@ async def run_workflow_step_task(
                 "output": step_output,
                 "execution_receipt": receipt_sig,
                 "cost": actual_cost,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
             }
             db_run.completed_steps = completed
 
@@ -827,23 +692,17 @@ class WorkerSettings:
         run_agent_task,
         run_workflow_task,
         run_workflow_step_task,
-        finalize_vacn_settlements,
         process_market_matching,
         run_agent_bidding_evaluation,
         verify_execution_receipts,
-        process_settlement_mempool,
     ]
     cron_jobs = [
-        cron(finalize_vacn_settlements, minute=None, second=0),  # Run every minute
         cron(
             process_market_matching, minute=None, second=30
         ),  # Run every minute (offset by 30s)
         cron(
             verify_execution_receipts, minute=None, second=15
         ),  # Run every minute (offset by 15s)
-        cron(
-            process_settlement_mempool, minute=None, second=45
-        ),  # Run every minute (offset by 45s)
     ]
     redis_settings = RedisSettings(
         host=REDIS_QUEUE_HOST, port=REDIS_QUEUE_PORT, password=REDIS_PASSWORD

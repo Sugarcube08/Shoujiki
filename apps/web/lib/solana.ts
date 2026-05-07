@@ -13,38 +13,6 @@ export const setPlatformWallet = (address: string) => {
   PLATFORM_WALLET = address;
 };
 
-const ESCROW_PROGRAM_ID = new PublicKey("SHoujikiEscrow11111111111111111111111111111");
-
-export const createEscrowTransaction = async (
-  fromPubkey: PublicKey,
-  agentCreatorPubkey: PublicKey,
-  taskId: string,
-  amountSol: number
-) => {
-  const amount = Math.round(amountSol * LAMPORTS_PER_SOL);
-
-  // 1. Derive deterministic reference address for this task
-  // This allows the backend to verify the payment without a custom program
-  const taskIdHash = Buffer.from(sha256.arrayBuffer(taskId));
-  const reference = Keypair.fromSeed(taskIdHash).publicKey;
-
-  // 2. Construct System Transfer Instruction
-  // We transfer to the PLATFORM_WALLET and include the 'reference' as a non-writable account
-  // This is the standard "Solana Pay" pattern for verifiable payments
-  const ix = SystemProgram.transfer({
-    fromPubkey,
-    toPubkey: new PublicKey(PLATFORM_WALLET),
-    lamports: amount,
-  });
-
-  // Add the reference key to the transaction so the backend can find it
-  ix.keys.push({ pubkey: reference, isSigner: false, isWritable: false });
-
-  const tx = new Transaction().add(ix);
-  
-  return { tx, reference };
-};
-
 export const createSolanaPayURL = (recipient: PublicKey, amount: number, reference: PublicKey, label: string, message: string) => {
   const url = encodeURL({
     recipient,

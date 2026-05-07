@@ -12,7 +12,7 @@ Shoujiki is a **Solana-native marketplace** where:
 
 * Developers create and deploy AI agents using an SDK
 * Agents are registered and listed on a marketplace
-* Users connect wallets, fund escrow, and hire agents
+* Users connect wallets, deposit funds, and hire agents
 * Agents execute tasks and receive payment automatically
 
 ---
@@ -40,7 +40,7 @@ Shoujiki is a **Solana-native marketplace** where:
 * Agent registry (storage + metadata)
 * Marketplace (UI + API)
 * Wallet-based authentication
-* Escrow + payment flow (Solana)
+* L2 Ledger settlement (Solana)
 * Agent execution system
 * Containerized deployment
 
@@ -68,7 +68,7 @@ Core Modules:
   - Auth (Wallet)
   - Agent Registry
   - Execution Engine
-  - Billing (Escrow)
+  - Billing (L2 Wallet)
         ↓
 Sandbox (Docker Execution)
         ↓
@@ -102,7 +102,7 @@ Solana Network (Devnet/Testnet)
 
 * Connects wallet
 * Browses marketplace
-* Funds escrow
+* Verifies L2 balance
 * Executes agents
 
 ---
@@ -223,30 +223,31 @@ shoujiki deploy agent.py --price 0.01
 
 ---
 
-# 5.5 PAYMENT + ESCROW SYSTEM
+# 5.5 PAYMENT + L2 LEDGER SYSTEM
 
 ---
 
 ### Flow:
 
 ```text
-User → Pay → Escrow → Execute → Release → Developer
+User → Deposit → L2 Wallet → Execute → Settlement → Developer
 ```
 
 ---
 
 ### Requirements:
 
-* Accept transaction signature
+* Accept transaction signature for deposits
 * Verify via Solana RPC
-* Lock funds before execution
-* Release after success
+* Verify L2 balance before execution
+* Atomic settlement after success
+
 
 ---
 
 ### MVP Simplification:
 
-* Off-chain escrow tracking
+* L2 ledger tracking
 * On-chain verification
 
 ---
@@ -338,7 +339,7 @@ Connect Wallet → Browse → Select Agent → Pay → Execute → Receive Resul
 ## 6.3 Execution Flow
 
 ```text
-Verify Payment → Fetch Agent → Sandbox Execute → Return Output → Release Funds
+Verify L2 Balance → Fetch Agent → Sandbox Execute → Return Output → Settle L2
 ```
 
 ---
@@ -467,7 +468,7 @@ docker-compose up
 
 ---
 
-* Real on-chain escrow (program)
+* L2 protocol finality
 * Agent reputation system
 * Multi-agent workflows
 * Streaming outputs

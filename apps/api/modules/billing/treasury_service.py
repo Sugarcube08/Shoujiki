@@ -43,25 +43,49 @@ async def check_user_solvency(
     return is_solvent
 
 
+async def calculate_task_cost(
+    db: AsyncSession, agent_id: str, input_tokens: float, output_tokens: float
+) -> float:
+    """
+    Calculates the actual SOL cost for a task based on token usage.
+    """
+    agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
+    agent = agent_res.scalars().first()
+    if not agent:
+        return 0.0
+
+    input_cost = (input_tokens / 1_000_000) * agent.price_per_million_input_tokens
+    output_cost = (output_tokens / 1_000_000) * agent.price_per_million_output_tokens
+    return input_cost + output_cost
+
+
 async def deduct_agentic_fee(
-    db: AsyncSession, wallet_address: str, agent_id: str, amount_sol: float
-) -> bool:
+    db: AsyncSession,
+    wallet_address: str,
+    agent_id: str,
+    input_tokens: float,
+    output_tokens: float,
+) -> float:
     """
-    Deducts dynamic fees from the internal App Wallet and credits the Agent.
+    Deducts dynamic fees from the internal App Wallet based on token usage and credits the Agent.
+    Returns the total amount deducted.
     """
-    # 1. Deduct from User
+    # 1. Calculate Cost
+    amount_sol = await calculate_task_cost(db, agent_id, input_tokens, output_tokens)
+
+    # 2. Deduct from User
     user_wallet = await get_or_create_user_wallet(db, wallet_address)
 
     if user_wallet.balance < amount_sol:
         logger.error(
-            f"TREASURY: Critical failure - balance went insolvent during deduction for {wallet_address}"
+            f"TREASURY: Critical failure - balance went insolvent during deduction for {wallet_address}. Amount: {amount_sol}"
         )
-        # In a real system, we might still deduct and go negative or trigger an alert
+        # We still deduct to reflect the cost incurred
         user_wallet.balance -= amount_sol
     else:
         user_wallet.balance -= amount_sol
 
-    # 2. Credit Agent (Internal Ledger)
+    # 3. Credit Agent (Internal Ledger)
     agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = agent_res.scalars().first()
 
@@ -69,13 +93,13 @@ async def deduct_agentic_fee(
         agent.balance += amount_sol
         agent.total_earnings += amount_sol
         logger.info(
-            f"TREASURY: Credited agent {agent_id} with {amount_sol} SOL. New balance: {agent.balance}"
+            f"TREASURY: Credited agent {agent_id} with {amount_sol} SOL for {input_tokens}in/{output_tokens}out tokens."
         )
     else:
         logger.error(f"TREASURY: Agent {agent_id} not found during fee credit.")
 
     await db.commit()
-    return True
+    return amount_sol
 
 
 async def record_agent_earnings(db: AsyncSession, agent_id: str, amount_sol: float):

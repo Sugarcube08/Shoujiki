@@ -57,23 +57,14 @@ async def run_agent(
     # 3. Agentic Billing: Pre-execution Solvency Check
     from backend.modules.billing import treasury_service
 
-    if req.payment_type == "app_wallet":
-        is_solvent = await treasury_service.check_user_solvency(
-            db, current_user, agent.price
+    is_solvent = await treasury_service.check_user_solvency(
+        db, current_user, 0.001 # Baseline check for start of execution
+    )
+    if not is_solvent:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Insufficient funds in App Wallet. Required baseline: 0.001 SOL",
         )
-        if not is_solvent:
-            raise HTTPException(
-                status_code=402,
-                detail=f"Insufficient funds in App Wallet. Required: {agent.price} SOL",
-            )
-    elif req.payment_type == "escrow":
-        if not req.signature:
-            raise HTTPException(status_code=400, detail="Missing transaction signature for escrow payment")
-        # We don't verify the escrow fully here (slow RPC), the worker will do it.
-        # But we can do a quick check if needed. For now, we trust the signature is provided.
-        pass
-    else:
-        raise HTTPException(status_code=400, detail="Invalid payment_type")
 
     # 4. Create task record (using task_id from frontend)
     db_task = Task(
