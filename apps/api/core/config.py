@@ -8,14 +8,10 @@ if env_path.exists():
     load_dotenv(dotenv_path=env_path)
 
 # Ensure the seed is exactly 32 bytes for Solana keypair generation
-_raw_seed = os.getenv("PLATFORM_SECRET_SEED", "shoujiki_platform_secret_32_char")
-if len(_raw_seed) != 32:
-    # Use SHA256 to consistently get a 32-byte seed regardless of input length
-    import hashlib
-
-    PLATFORM_SECRET_SEED = hashlib.sha256(_raw_seed.encode()).hexdigest()[:32]
-else:
-    PLATFORM_SECRET_SEED = _raw_seed
+_raw_seed = os.getenv("PLATFORM_SECRET_SEED", "shoujiki_platform_master_seed_32")
+import hashlib
+PLATFORM_SECRET_SEED_BYTES = hashlib.sha256(_raw_seed.encode()).digest()
+PLATFORM_SECRET_SEED = _raw_seed # Keep original for non-keypair uses if any
 
 PLATFORM_WALLET = os.getenv("PLATFORM_WALLET", "")  # Will be derived from seed if empty
 SOLANA_RPC_URL = os.getenv("SOLANA_RPC_URL", "https://api.devnet.solana.com")

@@ -119,6 +119,7 @@ async def test_agent(
             req.input_data or {"test": True},
             req.requirements,
             req.entrypoint,
+            env_vars=req.env_vars,
         )
         return envelope
     except Exception as e:
@@ -185,6 +186,7 @@ async def deploy_agent_zip(
     description: str = Form(""),
     price: float = Form(0.01),
     entrypoint: str = Form("main.py"),
+    env_vars: str = Form("{}"),
     db: AsyncSession = Depends(get_db),
     current_user: str = Depends(get_current_user),
 ):
@@ -214,6 +216,11 @@ async def deploy_agent_zip(
         raise HTTPException(status_code=400, detail=msg)
 
     # 3. Create Agent object for service
+    try:
+        env_vars_dict = json.loads(env_vars)
+    except Exception:
+        env_vars_dict = {}
+
     agent_data = AgentCreate(
         id=id,
         name=name,
@@ -223,6 +230,7 @@ async def deploy_agent_zip(
         requirements=[],  # Standard pre-installed env
         entrypoint=entrypoint,
         version="v1",
+        env_vars=env_vars_dict,
     )
 
     return await agent_service.create_agent(db, agent_data, current_user)

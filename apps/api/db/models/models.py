@@ -36,6 +36,7 @@ class Agent(Base):
     mint_address = Column(
         String, nullable=True, index=True
     )  # Metaplex Core Asset Address
+    env_vars = Column(JSON, nullable=True, default={})
 
     # Execution Stats
     total_runs = Column(Float, nullable=False, default=0)

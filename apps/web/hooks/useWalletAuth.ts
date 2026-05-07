@@ -12,13 +12,15 @@ export function useWalletAuth() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('shoujiki_token');
-    if (token && connected) {
-      setIsAuthenticated(true);
+    if (connected) {
+      // Clear all old data from local storage whenever a wallet connects or changes
+      // to ensure a fresh session and prevent data leakage between sessions.
+      localStorage.clear();
+      setIsAuthenticated(false);
     } else {
       setIsAuthenticated(false);
     }
-  }, [connected]);
+  }, [connected, publicKey]);
 
   useEffect(() => {
     if (connected && publicKey) {
@@ -56,7 +58,7 @@ export function useWalletAuth() {
   };
 
   const logout = () => {
-    localStorage.removeItem('shoujiki_token');
+    localStorage.clear();
     setIsAuthenticated(false);
     disconnect();
   };

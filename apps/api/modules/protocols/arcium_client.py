@@ -28,6 +28,7 @@ class ArciumClient:
         input_data: dict,
         requirements: list = None,
         entrypoint: str = "",
+        env_vars: Dict[str, str] = None,
     ) -> dict:
         """
         Executes a WASM-compiled agent or deterministic source code.
@@ -36,6 +37,8 @@ class ArciumClient:
 
         if requirements is None:
             requirements = []
+        if env_vars is None:
+            env_vars = {}
 
         try:
             # 1. Input Commitment
@@ -123,7 +126,7 @@ class ArciumClient:
                 from backend.modules.sandbox.client import execute_in_sandbox
 
                 sandbox_result = await execute_in_sandbox(
-                    files, requirements, entrypoint, input_data
+                    files, requirements, entrypoint, input_data, env_vars
                 )
 
                 if sandbox_result.get("success"):
@@ -166,12 +169,11 @@ class ArciumClient:
             receipt_hash = hashlib.sha256(receipt_payload.encode()).hexdigest()
 
             # Use the platform keypair for the attestation signature instead of simulating a random one
-            from backend.core.config import PLATFORM_SECRET_SEED
+            from backend.core.config import PLATFORM_SECRET_SEED_BYTES
             from solders.keypair import Keypair
             import base58
 
-            seed_bytes = hashlib.sha256(PLATFORM_SECRET_SEED.encode()).digest()
-            enclave_keypair = Keypair.from_seed(seed_bytes)
+            enclave_keypair = Keypair.from_seed(PLATFORM_SECRET_SEED_BYTES)
 
             attestation_signature = enclave_keypair.sign_message(receipt_hash.encode())
             signature_b58 = base58.b58encode(bytes(attestation_signature)).decode()

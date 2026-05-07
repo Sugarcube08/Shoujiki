@@ -134,7 +134,7 @@ export default function DeploySpacePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
                     <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-1">Fee</p>
                     <p className="text-lg font-semibold text-zinc-200">{draft.price} <span className="text-xs font-normal text-zinc-500">SOL</span></p>
@@ -142,6 +142,10 @@ export default function DeploySpacePage() {
                   <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
                     <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-1">Assets</p>
                     <p className="text-lg font-semibold text-zinc-200">{Object.keys(draft.files).length}</p>
+                  </div>
+                  <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                    <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-1">Env Config</p>
+                    <p className="text-lg font-semibold text-zinc-200">{draft.env_vars ? Object.keys(draft.env_vars).length : 0}</p>
                   </div>
                 </div>
 

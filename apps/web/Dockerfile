@@ -27,7 +27,7 @@ RUN npm run build
 FROM node:22-slim AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy only necessary files (smaller image)
@@ -38,4 +38,4 @@ COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["node", "server.js" ,"--verbose"]

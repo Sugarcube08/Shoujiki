@@ -10,7 +10,7 @@ from solana.rpc.async_api import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import (
     SOLANA_RPC_URL,
-    PLATFORM_SECRET_SEED,
+    PLATFORM_SECRET_SEED_BYTES,
     SQUADS_PROGRAM_ID as CONFIG_PROGRAM_ID,
 )
 from backend.db.session import AsyncSessionLocal
@@ -24,8 +24,7 @@ SQUADS_PROGRAM_ID = Pubkey.from_string(CONFIG_PROGRAM_ID)
 ESCROW_PROGRAM_ID = Pubkey.from_string("SHoujikiEscrow11111111111111111111111111111")
 
 # Initialize Platform Keypair
-seed_bytes = hashlib.sha256(PLATFORM_SECRET_SEED.encode()).digest()
-platform_keypair = Keypair.from_seed(seed_bytes)
+platform_keypair = Keypair.from_seed(PLATFORM_SECRET_SEED_BYTES)
 PLATFORM_WALLET = str(platform_keypair.pubkey())
 logger.info(f"SOLANA: Platform Authority initialized: {PLATFORM_WALLET}")
 
@@ -128,8 +127,10 @@ async def verify_escrow_funded(task_id: str, expected_amount_sol: float):
     """
     async with AsyncClient(SOLANA_RPC_URL) as client:
         try:
+            # Hash task_id to 32 bytes for valid PDA seed
+            task_id_hash = hashlib.sha256(task_id.encode()).digest()
             escrow_pda, _ = Pubkey.find_program_address(
-                [b"escrow", task_id.encode()], ESCROW_PROGRAM_ID
+                [b"escrow", task_id_hash], ESCROW_PROGRAM_ID
             )
             resp = await client.get_balance(escrow_pda)
 
@@ -161,8 +162,10 @@ async def settle_task_payment_onchain(
     async with AsyncClient(SOLANA_RPC_URL) as client:
         try:
             # 1. Derive Escrow PDA
+            # Hash task_id to 32 bytes for valid PDA seed
+            task_id_hash = hashlib.sha256(task_id.encode()).digest()
             escrow_pda, _ = Pubkey.find_program_address(
-                [b"escrow", task_id.encode()], ESCROW_PROGRAM_ID
+                [b"escrow", task_id_hash], ESCROW_PROGRAM_ID
             )
 
             # 2. Construct submit_poae instruction
@@ -211,8 +214,10 @@ async def finalize_task_settlement(task_id: str, user_wallet: str, creator_walle
     """
     async with AsyncClient(SOLANA_RPC_URL) as client:
         try:
+            # Hash task_id to 32 bytes for valid PDA seed
+            task_id_hash = hashlib.sha256(task_id.encode()).digest()
             escrow_pda, _ = Pubkey.find_program_address(
-                [b"escrow", task_id.encode()], ESCROW_PROGRAM_ID
+                [b"escrow", task_id_hash], ESCROW_PROGRAM_ID
             )
 
             disc = get_anchor_discriminator("finalize_settlement")

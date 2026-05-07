@@ -14,6 +14,7 @@ class AgentBase(BaseModel):
     name: str = Field(default="")
     description: Optional[str] = None
     price: float = Field(default=0.0)
+    env_vars: Optional[Dict[str, str]] = Field(default_factory=dict)
 
 
 class AgentCreate(AgentBase):
@@ -29,6 +30,7 @@ class AgentTestRequest(BaseModel):
     requirements: List[str]
     entrypoint: str
     input_data: Optional[dict] = {"test": True}
+    env_vars: Optional[Dict[str, str]] = Field(default_factory=dict)
 
 
 class AgentResponse(AgentBase):

@@ -12,15 +12,14 @@ from solana.rpc.async_api import AsyncClient
 
 from backend.core.config import (
     SOLANA_RPC_URL,
-    PLATFORM_SECRET_SEED,
+    PLATFORM_SECRET_SEED_BYTES,
     SQUADS_PROGRAM_ID as CONFIG_PROGRAM_ID,
 )
 
 logger = logging.getLogger(__name__)
 
 # Initialize Platform Keypair (Deterministic from seed)
-platform_seed = hashlib.sha256(PLATFORM_SECRET_SEED.encode()).digest()
-platform_keypair = Keypair.from_seed(platform_seed)
+platform_keypair = Keypair.from_seed(PLATFORM_SECRET_SEED_BYTES)
 
 
 def get_anchor_discriminator(name: str) -> bytes:
@@ -387,7 +386,7 @@ class SquadsClient:
 
             # Use the withdrawal proposal logic to propose the M2M payment
             proposal_id = await self.create_withdrawal_proposal(
-                hiring_treasury_pda, str(hired_treasury_pda), amount
+                hiring_treasury_pda, hiring_treasury_pda, str(hired_treasury_pda), amount
             )
 
             return proposal_id is not None

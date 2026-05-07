@@ -4,7 +4,11 @@ import json
 
 
 async def execute_in_sandbox(
-    files: dict, requirements: list, entrypoint: str, input_data: dict
+    files: dict,
+    requirements: list,
+    entrypoint: str,
+    input_data: dict,
+    env_vars: dict = None,
 ):
     # Try configured URL first
     urls = [SANDBOX_URL, "http://localhost:8001", "http://sandbox:8001"]
@@ -26,6 +30,7 @@ async def execute_in_sandbox(
                         "requirements": requirements,
                         "entrypoint": entrypoint,
                         "input_data": json.dumps(input_data),
+                        "env_vars": env_vars or {},
                     },
                 )
                 response.raise_for_status()

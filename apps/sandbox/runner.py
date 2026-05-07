@@ -20,7 +20,9 @@ def set_limits():
     resource.setrlimit(resource.RLIMIT_NPROC, (20, 20))
 
 
-def run_agent_code(files: dict, requirements: list, entrypoint: str, input_data: str):
+def run_agent_code(
+    files: dict, requirements: list, entrypoint: str, input_data: str, env_vars: dict = None
+):
     """
     Executes agent code in a hardened, fail-closed environment.
     Supports Bubblewrap (Hardened) and Unshare (Network isolation).
@@ -30,6 +32,11 @@ def run_agent_code(files: dict, requirements: list, entrypoint: str, input_data:
         logger.warning(
             f"Sandbox: Ignoring dynamic requirements {requirements}. Agents must use pre-installed env."
         )
+
+    # Prepare environment variables
+    env = os.environ.copy()
+    if env_vars:
+        env.update(env_vars)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # 1. Write agent files
@@ -168,6 +175,7 @@ except Exception as e:
                 text=True,
                 timeout=15,
                 preexec_fn=set_limits,
+                env=env,
             )
             # If bwrap failed due to lack of permissions/binary, try Tier 2
             if process.returncode != 0 and (
@@ -186,6 +194,7 @@ except Exception as e:
                     text=True,
                     timeout=15,
                     preexec_fn=set_limits,
+                    env=env,
                 )
                 if (
                     process.returncode != 0
@@ -204,6 +213,7 @@ except Exception as e:
                         text=True,
                         timeout=15,
                         preexec_fn=set_limits,
+                        env=env,
                     )
                 except Exception as final_e:
                     return (

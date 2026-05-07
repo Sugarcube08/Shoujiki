@@ -40,6 +40,7 @@ async def create_agent(db: AsyncSession, agent_data: AgentCreate, creator_wallet
         db_agent.name = agent_data.name
         db_agent.description = agent_data.description
         db_agent.price = agent_data.price
+        db_agent.env_vars = agent_data.env_vars
     else:
         # VACN Protocol: Identity & Treasury Provisioning
 
@@ -171,6 +172,7 @@ async def create_agent(db: AsyncSession, agent_data: AgentCreate, creator_wallet
             creator_wallet=creator_wallet,
             mint_address=mint_address,
             squads_vault_pda=squads_pda,
+            env_vars=agent_data.env_vars,
         )
         db.add(db_agent)
 

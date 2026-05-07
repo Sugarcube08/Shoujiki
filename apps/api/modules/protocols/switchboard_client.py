@@ -8,13 +8,12 @@ from solders.transaction import VersionedTransaction
 from solders.message import MessageV0
 from solana.rpc.async_api import AsyncClient
 
-from backend.core.config import SOLANA_RPC_URL, PLATFORM_SECRET_SEED
+from backend.core.config import SOLANA_RPC_URL, PLATFORM_SECRET_SEED_BYTES
 
 logger = logging.getLogger(__name__)
 
 # Initialize Platform Keypair
-platform_seed = hashlib.sha256(PLATFORM_SECRET_SEED.encode()).digest()
-platform_keypair = Keypair.from_seed(platform_seed)
+platform_keypair = Keypair.from_seed(PLATFORM_SECRET_SEED_BYTES)
 
 
 def get_anchor_discriminator(name: str) -> bytes:

@@ -11,6 +11,7 @@ class ExecutionRequest(BaseModel):
     requirements: List[str]
     entrypoint: str
     input_data: str  # JSON string
+    env_vars: Dict[str, str] = {}
 
 
 @app.post("/execute")
@@ -21,6 +22,7 @@ async def execute(req: ExecutionRequest):
             requirements=req.requirements,
             entrypoint=req.entrypoint,
             input_data=req.input_data,
+            env_vars=req.env_vars,
         )
         return {
             "success": success,

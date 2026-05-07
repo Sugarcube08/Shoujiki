@@ -122,6 +122,7 @@ async def run_agent_task(
                 input_data,
                 current_ver.get("requirements", []),
                 current_ver.get("entrypoint", ""),
+                env_vars=agent.env_vars,
             )
 
             exec_result = exec_envelope["result"]
@@ -732,6 +733,7 @@ async def run_workflow_step_task(
                 step_input,
                 current_ver.get("requirements", []),
                 current_ver.get("entrypoint", ""),
+                env_vars=agent.env_vars,
             )
 
             exec_result = exec_envelope["result"]
@@ -848,3 +850,4 @@ class WorkerSettings:
     )
     on_startup = startup
     on_shutdown = shutdown
+own

@@ -34,11 +34,23 @@ export default function DevSpacePage() {
   const { isAuthenticated, login, connected } = useWalletAuth();
 
   const [metadata, setMetadata] = useState({
-    id: '',
+    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'agent-' + Date.now(),
     name: '',
     description: '',
     price: 0.01,
   });
+
+  const [envVars, setEnvVars] = useState([{ key: '', value: '' }]);
+
+  const getEnvVarsDict = () => {
+    const vars: Record<string, string> = {};
+    envVars.forEach(ev => {
+      if (ev.key.trim()) {
+        vars[ev.key.trim()] = ev.value;
+      }
+    });
+    return vars;
+  };
 
   const [files, setFiles] = useState<Record<string, string>>({
     'main.py': `from shoujiki import shoujiki
@@ -94,6 +106,7 @@ agent = Agent()`,
         files,
         requirements,
         entrypoint,
+        env_vars: getEnvVarsDict(),
         version: 'v' + Date.now()
       });
       setTestResult(res);
@@ -111,7 +124,7 @@ agent = Agent()`,
       setError('Missing metadata identifiers');
       return;
     }
-    const draft = { ...metadata, files, requirements, entrypoint, version: 'v' + Date.now() };
+    const draft = { ...metadata, files, requirements, entrypoint, env_vars: getEnvVarsDict(), version: 'v' + Date.now() };
     localStorage.setItem('shoujiki_draft', JSON.stringify(draft));
     router.push('/deploy');
   };
@@ -194,7 +207,8 @@ agent = Agent()`,
                 label="Agent Unique ID"
                 value={metadata.id}
                 onChange={e => setMetadata({ ...metadata, id: e.target.value })}
-                className="h-9 text-xs"
+                className="h-9 text-xs font-mono text-zinc-400"
+                readOnly
               />
               <Input
                 label="Display Name"
@@ -202,6 +216,52 @@ agent = Agent()`,
                 onChange={e => setMetadata({ ...metadata, name: e.target.value })}
                 className="h-9 text-xs"
               />
+            </CardContent>
+          </Card>
+
+          <Card className="border-zinc-800/40 bg-[#09090b]">
+            <CardHeader className="py-3 px-6 border-b border-zinc-800/40 bg-zinc-900/10 flex flex-row justify-between items-center">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Environment_Config</span>
+              <button onClick={() => setEnvVars([...envVars, { key: '', value: '' }])} className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 bg-zinc-900 rounded">
+                <Plus size={12} />
+              </button>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3 max-h-[180px] overflow-y-auto custom-scrollbar">
+              {envVars.map((ev, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <Input
+                    placeholder="KEY"
+                    value={ev.key}
+                    onChange={e => {
+                      const newVars = [...envVars];
+                      newVars[idx].key = e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+                      setEnvVars(newVars);
+                    }}
+                    className="h-8 text-[10px] font-mono flex-1"
+                  />
+                  <Input
+                    placeholder="VALUE"
+                    value={ev.value}
+                    type="password"
+                    onChange={e => {
+                      const newVars = [...envVars];
+                      newVars[idx].value = e.target.value;
+                      setEnvVars(newVars);
+                    }}
+                    className="h-8 text-[10px] font-mono flex-1"
+                  />
+                  <button
+                    onClick={() => {
+                      const newVars = envVars.filter((_, i) => i !== idx);
+                      if (newVars.length === 0) newVars.push({ key: '', value: '' });
+                      setEnvVars(newVars);
+                    }}
+                    className="text-zinc-600 hover:text-red-400 p-1"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>

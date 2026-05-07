@@ -1,6 +1,7 @@
 import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL, Connection, Keypair, TransactionInstruction } from '@solana/web3.js';
 import { encodeURL } from '@solana/pay';
 import BigNumber from 'bignumber.js';
+import { sha256 } from 'js-sha256';
 
 // Squads V4 Program ID
 const SQUADS_PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_SQUADS_PROGRAM_ID || "SQDS4Byj9s7BfR7atvH9iSnduXW1U9CAdX9rW5L2S8X");
@@ -22,41 +23,26 @@ export const createEscrowTransaction = async (
 ) => {
   const amount = Math.round(amountSol * LAMPORTS_PER_SOL);
 
-  // 1. Derive Escrow PDA
-  const [escrowPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("escrow"), Buffer.from(taskId)],
-    ESCROW_PROGRAM_ID
-  );
+  // 1. Derive deterministic reference address for this task
+  // This allows the backend to verify the payment without a custom program
+  const taskIdHash = Buffer.from(sha256.arrayBuffer(taskId));
+  const reference = Keypair.fromSeed(taskIdHash).publicKey;
 
-  // 2. Construct instruction data
-  // Anchor discriminator: sha256("global:initialize_escrow").slice(0, 8)
-  const discriminator = Buffer.from([0xd9, 0x34, 0x27, 0x95, 0x43, 0xe4, 0x98, 0xc4]);
-  
-  const amountBuffer = Buffer.alloc(8);
-  amountBuffer.writeBigUInt64LE(BigInt(amount));
-  
-  const taskBuffer = Buffer.from(taskId);
-  const taskLenBuffer = Buffer.alloc(4);
-  taskLenBuffer.writeUInt32LE(taskBuffer.length);
-  
-  const data = Buffer.concat([discriminator, amountBuffer, taskLenBuffer, taskBuffer]);
-
-  const ix = new TransactionInstruction({
-    programId: ESCROW_PROGRAM_ID,
-    keys: [
-      { pubkey: escrowPda, isSigner: false, isWritable: true },
-      { pubkey: fromPubkey, isSigner: true, isWritable: true },
-      { pubkey: agentCreatorPubkey, isSigner: false, isWritable: false },
-      { pubkey: new PublicKey(PLATFORM_WALLET), isSigner: false, isWritable: false },
-      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-    ],
-    data,
+  // 2. Construct System Transfer Instruction
+  // We transfer to the PLATFORM_WALLET and include the 'reference' as a non-writable account
+  // This is the standard "Solana Pay" pattern for verifiable payments
+  const ix = SystemProgram.transfer({
+    fromPubkey,
+    toPubkey: new PublicKey(PLATFORM_WALLET),
+    lamports: amount,
   });
+
+  // Add the reference key to the transaction so the backend can find it
+  ix.keys.push({ pubkey: reference, isSigner: false, isWritable: false });
 
   const tx = new Transaction().add(ix);
   
-  // Return escrowPda as the reference for backend verification
-  return { tx, reference: escrowPda };
+  return { tx, reference };
 };
 
 export const createSolanaPayURL = (recipient: PublicKey, amount: number, reference: PublicKey, label: string, message: string) => {
