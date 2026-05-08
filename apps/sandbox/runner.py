@@ -56,14 +56,22 @@ def run_agent_code(
             f.write(input_data)
 
         # 3. Inject internal shoujiki module (M2M Bridge + Env Access)
+        import base64
         env_json = json.dumps(env_vars or {})
+        env_b64 = base64.b64encode(env_json.encode()).decode()
+        
         shoujiki_module = f"""
 import json
 import os
+import base64
 
 class Shoujiki:
     def __init__(self):
-        self.env = json.loads('''{env_json}''')
+        try:
+            env_json = base64.b64decode('{env_b64}').decode()
+            self.env = json.loads(env_json)
+        except Exception:
+            self.env = {{}}
 
     def get_env(self, key, default=None):
         return self.env.get(key, default)

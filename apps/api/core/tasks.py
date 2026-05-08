@@ -1,21 +1,12 @@
-import asyncio
-import hashlib
 import json
 import logging
 import uuid
-from dotenv import load_dotenv
-
-# Ensure env is loaded for the worker
-load_dotenv()
-
 from arq import create_pool, cron
 from arq.connections import RedisSettings
 from backend.modules.protocols.arcium_client import ArciumClient
-from backend.modules.billing import service as billing_service
 from backend.db.models.models import Task, Workflow, WorkflowRun, Agent, MarketOrder
-from sqlalchemy import update, select
+from sqlalchemy import select
 from backend.db.session import AsyncSessionLocal
-
 from backend.core.config import (
     REDIS_QUEUE_HOST,
     REDIS_QUEUE_PORT,
@@ -25,7 +16,6 @@ from backend.core.config import (
 )
 
 logger = logging.getLogger(__name__)
-
 arcium_client = ArciumClient()
 
 
@@ -252,7 +242,8 @@ async def run_verifier_node_audit(ctx):
             try:
                 agent_res = await db.execute(select(Agent).where(Agent.id == task.agent_id))
                 agent = agent_res.scalars().first()
-                if not agent: continue
+                if not agent:
+                    continue
 
                 current_ver = next((v for v in agent.versions if v["version"] == agent.current_version), agent.versions[-1])
                 input_data = json.loads(task.input_data)
@@ -334,7 +325,8 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
             visited.add(node_id)
             
             node = nodes_map.get(node_id)
-            if not node: continue
+            if not node:
+                continue
 
             logger.info(f"SWARM_OS: Executing node {node_id} ({node['type']})")
             run.active_nodes = [node_id]

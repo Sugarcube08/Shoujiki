@@ -126,7 +126,7 @@ async def run_workflow(
     if not is_solvent:
         raise HTTPException(
             status_code=402,
-            detail=f"Insufficient funds in App Wallet to start workflow.",
+            detail="Insufficient funds in App Wallet to start workflow.",
         )
 
     # 3. Create WorkflowRun

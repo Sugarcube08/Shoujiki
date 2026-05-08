@@ -1,8 +1,6 @@
 import hashlib
-import struct
 import asyncio
 from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
 from solders.keypair import Keypair
 from solders.signature import Signature
 from solders.transaction import VersionedTransaction
