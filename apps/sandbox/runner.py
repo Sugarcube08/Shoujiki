@@ -217,26 +217,14 @@ except Exception as e:
                 ):
                     raise PermissionError("unshare failed")
             except Exception as e:
-                logger.warning(
-                    f"Sandbox: Isolation failed (bwrap/unshare). Falling back to direct execution for development. Error: {str(e)}"
+                error_msg = f"Sandbox Critical Failure: Isolation failed (bwrap/unshare). System configured to FAIL CLOSED to prevent RCE. Error: {str(e)}"
+                logger.error(error_msg)
+                return (
+                    False,
+                    "",
+                    error_msg,
+                    [],
                 )
-                try:
-                    process = subprocess.run(
-                        ["python3", "wrapper.py"],
-                        cwd=tmpdir,
-                        capture_output=True,
-                        text=True,
-                        timeout=15,
-                        preexec_fn=set_limits,
-                        env=env,
-                    )
-                except Exception as final_e:
-                    return (
-                        False,
-                        "",
-                        f"Fail-Closed: All execution methods failed. Error: {str(final_e)}",
-                        [],
-                    )
 
         # 5. Process Output
         MAX_OUTPUT_SIZE = 100000

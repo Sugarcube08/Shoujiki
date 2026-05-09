@@ -14,6 +14,14 @@ export function useWalletAuth() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const handleAuthExpired = () => {
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('shoujiki-auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('shoujiki-auth-expired', handleAuthExpired);
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem('shoujiki_token');
     const authedWallet = localStorage.getItem('shoujiki_wallet');
 
@@ -26,7 +34,23 @@ export function useWalletAuth() {
         setIsAuthenticated(false);
       } else if (token) {
         // Persistence: Same wallet or initial load with valid session
-        setIsAuthenticated(true);
+        // Basic JWT expiration check (proactive)
+        try {
+          const payloadBase64 = token.split('.')[1];
+          const decodedPayload = JSON.parse(atob(payloadBase64));
+          const isExpired = decodedPayload.exp * 1000 < Date.now();
+          
+          if (isExpired) {
+            localStorage.removeItem('shoujiki_token');
+            setIsAuthenticated(false);
+          } else {
+            setIsAuthenticated(true);
+          }
+        } catch (e) {
+          console.error("Failed to parse auth token:", e);
+          localStorage.removeItem('shoujiki_token');
+          setIsAuthenticated(false);
+        }
       } else {
         setIsAuthenticated(false);
       }

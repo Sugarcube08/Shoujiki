@@ -15,6 +15,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Add interceptor to handle 401 Unauthorized errors (expired tokens)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear token on auth failure
+      localStorage.removeItem('shoujiki_token');
+      localStorage.removeItem('shoujiki_wallet');
+      // Dispatch custom event to notify hooks/components
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('shoujiki-auth-expired'));
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const loginWallet = async (public_key: string, signature: string, message: string) => {
   const response = await api.post('/auth/verify', { public_key, signature, message });
   localStorage.setItem('shoujiki_token', response.data.access_token);
