@@ -4,7 +4,7 @@ from core.dependencies import get_current_user
 from db.session import get_db
 from modules.billing import service as billing_service
 from modules.billing import treasury_service
-from schemas.billing import UserWalletResponse, DepositRequest, WithdrawRequest, TransactionResponse
+from schemas.billing import UserWalletResponse, DepositRequest, WithdrawRequest, TransactionResponse, SessionCreate
 
 router = APIRouter()
 
@@ -84,3 +84,26 @@ async def withdraw_agent_earnings(
     if not success:
         raise HTTPException(status_code=400, detail=result)
     return {"message": "Withdrawal successful", "tx_signature": result}
+
+
+# --- Agent Session Management (Aggregated Billing) ---
+
+@router.post("/sessions")
+async def start_autonomous_session(
+    req: SessionCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Initializes a new persistent session for fair aggregated billing."""
+    return await treasury_service.create_agent_session(db, current_user, req.agent_id)
+
+
+@router.post("/sessions/{session_id}/settle")
+async def settle_autonomous_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Finalizes an active session and settles the aggregated cost against the user's wallet."""
+    cost = await treasury_service.settle_session(db, session_id)
+    return {"message": "Session settled successfully", "amount_deducted": cost}

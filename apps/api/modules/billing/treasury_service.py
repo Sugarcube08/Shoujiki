@@ -1,7 +1,8 @@
 import logging
+import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from db.models.models import UserWallet, Agent
+from db.models.models import UserWallet, Agent, AgentSession
 
 from modules.protocols import governance_service
 
@@ -45,13 +46,30 @@ async def check_user_solvency(
     return is_solvent
 
 
-MINIMUM_EXECUTION_FEE = 0.0001  # 0.0001 SOL base fee per task
+async def create_agent_session(db: AsyncSession, user_wallet: str, agent_id: str) -> AgentSession:
+    """
+    Starts a new conversational session to aggregate multiple task costs.
+    """
+    session = AgentSession(
+        id=f"sess_{uuid.uuid4().hex[:12]}",
+        user_wallet=user_wallet,
+        agent_id=agent_id,
+        status="active"
+    )
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+MINIMUM_SESSION_FEE = 0.0001  # Minimum SOL charged for an entire aggregated session
 
 async def calculate_task_cost(
     db: AsyncSession, agent_id: str, input_tokens: float, output_tokens: float
 ) -> float:
     """
-    Calculates the actual SOL cost for a task based on token usage.
+    Calculates the actual SOL cost for a task based purely on token usage.
+    No minimum fee is applied here to support aggregated session billing.
     """
     agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = agent_res.scalars().first()
@@ -61,10 +79,66 @@ async def calculate_task_cost(
     input_cost = (input_tokens / 1_000_000) * agent.price_per_million_input_tokens
     output_cost = (output_tokens / 1_000_000) * agent.price_per_million_output_tokens
     
-    total_cost = input_cost + output_cost
+    return input_cost + output_cost
+
+
+async def accrue_session_cost(
+    db: AsyncSession,
+    session_id: str,
+    input_tokens: float,
+    output_tokens: float,
+) -> float:
+    """
+    Updates the session with new token usage and accrued cost without immediate deduction.
+    """
+    result = await db.execute(select(AgentSession).where(AgentSession.id == session_id))
+    session = result.scalars().first()
+    if not session:
+        return 0.0
+
+    cost = await calculate_task_cost(db, session.agent_id, input_tokens, output_tokens)
     
-    # Apply minimum fee to ensure small executions are still billed
-    return max(total_cost, MINIMUM_EXECUTION_FEE)
+    session.total_input_tokens += input_tokens
+    session.total_output_tokens += output_tokens
+    session.aggregated_cost += cost
+    
+    await db.commit()
+    return cost
+
+
+async def settle_session(db: AsyncSession, session_id: str) -> float:
+    """
+    Finalizes a session, applies the global minimum fee once, and settles the user wallet.
+    """
+    result = await db.execute(select(AgentSession).where(AgentSession.id == session_id))
+    session = result.scalars().first()
+    if not session or session.status != "active":
+        return 0.0
+
+    # 1. Determine Final Gross Cost (Apply minimum only once for the whole session)
+    final_gross_sol = max(session.aggregated_cost, MINIMUM_SESSION_FEE)
+
+    # 2. Deduct from User
+    user_wallet = await get_or_create_user_wallet(db, session.user_wallet)
+    user_wallet.balance -= final_gross_sol
+    
+    # 3. Handle Protocol Fees and Agent Credit
+    fee_ratio = governance_service.NETWORK_PARAMETERS.get("fee_ratio", 0.05)
+    platform_fee = final_gross_sol * fee_ratio
+    agent_net_earning = final_gross_sol - platform_fee
+
+    agent_res = await db.execute(select(Agent).where(Agent.id == session.agent_id))
+    agent = agent_res.scalars().first()
+    if agent:
+        agent.balance += agent_net_earning
+        agent.total_earnings += agent_net_earning
+
+    # 4. Finalize session status
+    session.status = "settled"
+    
+    await db.commit()
+    logger.info(f"TREASURY: Settled session {session_id}. Total: {final_gross_sol} SOL.")
+    return final_gross_sol
 
 
 async def deduct_agentic_fee(
@@ -75,45 +149,22 @@ async def deduct_agentic_fee(
     output_tokens: float,
 ) -> float:
     """
-    Deducts dynamic fees from the internal App Wallet and credits the Agent net of platform fees.
-    Returns the total amount deducted from the user.
+    LEGACY/DIRECT: Deducts dynamic fees immediately. 
+    Maintained for single-task workflows but removes internal minimum logic.
     """
-    # 1. Calculate Gross Cost
     gross_amount_sol = await calculate_task_cost(db, agent_id, input_tokens, output_tokens)
-
-    # 2. Deduct from User (Full Amount)
     user_wallet = await get_or_create_user_wallet(db, wallet_address)
-
-    if user_wallet.balance < gross_amount_sol:
-        logger.error(
-            f"TREASURY: Critical failure - balance went insolvent during deduction for {wallet_address}. Amount: {gross_amount_sol}"
-        )
-    
     user_wallet.balance -= gross_amount_sol
-    logger.info(f"TREASURY: Deducted {gross_amount_sol} SOL from user {wallet_address}")
 
-    # 3. Calculate Protocol Fee (e.g., 5%)
     fee_ratio = governance_service.NETWORK_PARAMETERS.get("fee_ratio", 0.05)
     platform_fee = gross_amount_sol * fee_ratio
     agent_net_earning = gross_amount_sol - platform_fee
 
-    # 4. Credit Agent (Internal Ledger - Net Amount)
     agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = agent_res.scalars().first()
-
     if agent:
         agent.balance += agent_net_earning
         agent.total_earnings += agent_net_earning
-        logger.info(
-            f"TREASURY: Credited agent {agent_id} with {agent_net_earning} SOL (Net of {platform_fee} fee) for {input_tokens}in/{output_tokens}out tokens."
-        )
-    else:
-        logger.error(f"TREASURY: Agent {agent_id} not found during fee credit.")
 
-    # 5. Commit and update record
     await db.commit()
-    
-    # Optional: Log the platform fee for protocol accounting
-    logger.info(f"PROTOCOL: Collected {platform_fee} SOL platform fee from task execution.")
-    
     return gross_amount_sol

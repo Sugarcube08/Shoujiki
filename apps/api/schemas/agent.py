@@ -6,7 +6,7 @@ from datetime import datetime
 class AgentVersion(BaseModel):
     version: str
     files: Dict[str, str]  # filename -> content
-    requirements: List[str]
+    requirements: List[str] = Field(default_factory=list)
     entrypoint: str
 
 

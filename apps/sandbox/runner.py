@@ -36,6 +36,7 @@ def run_agent_code(
     """
     Executes agent code in a persistent, dedicated sandbox environment.
     Uses Virtual Environments (venv) per agent to cache installed requirements.
+    Supports file outputs via the '/app/outputs' directory.
     """
     # Prepare agent workspace
     agent_dir = os.path.join(SANDBOX_BASE_DIR, agent_id)
@@ -43,6 +44,9 @@ def run_agent_code(
     
     app_dir = os.path.join(agent_dir, "app")
     os.makedirs(app_dir, exist_ok=True)
+    
+    output_dir = os.path.join(app_dir, "outputs")
+    os.makedirs(output_dir, exist_ok=True)
     
     venv_dir = os.path.join(agent_dir, "venv")
     
@@ -53,6 +57,7 @@ def run_agent_code(
 
     # 2. Sync Agent Files
     for f in os.listdir(app_dir):
+        if f == "outputs": continue
         f_path = os.path.join(app_dir, f)
         try:
             if os.path.isfile(f_path): os.unlink(f_path)
@@ -61,7 +66,7 @@ def run_agent_code(
 
     for filename, content in files.items():
         if ".." in filename or filename.startswith("/"):
-            return False, "", f"Invalid filename: {filename}", []
+            return False, "", f"Invalid filename: {filename}", [], {}
         file_path = os.path.join(app_dir, filename)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, "w") as f:
@@ -71,6 +76,14 @@ def run_agent_code(
     in_path = os.path.join(app_dir, "input.json")
     with open(in_path, "w") as f:
         f.write(input_data)
+
+    # Clear outputs for new run
+    for f in os.listdir(output_dir):
+        f_path = os.path.join(output_dir, f)
+        try:
+            if os.path.isfile(f_path): os.unlink(f_path)
+            elif os.path.isdir(f_path): shutil.rmtree(f_path)
+        except Exception: pass
 
     # 4. Handle Requirements (Cached)
     req_file = os.path.join(agent_dir, "requirements.txt")
@@ -97,7 +110,7 @@ def run_agent_code(
             timeout=120
         )
 
-    # 5. Inject internal shoujiki module
+    # 5. Inject internal shoujiki module (M2M Bridge + Env Access + Output Path)
     env_json = json.dumps(env_vars or {})
     env_b64 = base64.b64encode(env_json.encode()).decode()
     
@@ -113,6 +126,7 @@ class Shoujiki:
             self.env = json.loads(env_json)
         except Exception:
             self.env = {{}}
+        self.output_dir = '/app/outputs'
 
     def get_env(self, key, default=None):
         return self.env.get(key, default)
@@ -151,7 +165,7 @@ def audit_hook(event, args):
         path = args[0]
         if isinstance(path, (str, bytes)):
             path_str = path if isinstance(path, str) else path.decode(errors='ignore')
-            # Allow venv but block system escape
+            # Allow venv and outputs but block system escape
             if any(p in path_str for p in ['/etc/', '/root/', '/home/', '~', '../']) and '{agent_id}' not in path_str:
                 raise PermissionError(f"Shoujiki Sandbox: Filesystem escape detected ({{path_str}})")
 
@@ -221,31 +235,29 @@ except Exception as e:
         python_bin, "wrapper.py"
     ]
 
-    # Tier 1: Bubblewrap (bwrap) - Kernel Level Isolation
+    # Tier 1: Bubblewrap (bwrap)
     process = None
     try:
         process = subprocess.run(bwrap_command, capture_output=True, text=True, timeout=30, preexec_fn=set_limits, env=env)
         if process.returncode != 0:
             logger.warning(f"Sandbox: Bubblewrap failed (code {process.returncode}). Stderr: {process.stderr}")
-            process = None # Force fallback
-    except Exception as e:
-        logger.warning(f"Sandbox: Bubblewrap execution error: {e}")
+            process = None
+    except Exception:
         process = None
 
-    # Tier 2: Unshare (Namespace isolation)
+    # Tier 2: Unshare
     if process is None:
         try:
             process = subprocess.run(unshare_command, cwd=app_dir, capture_output=True, text=True, timeout=30, preexec_fn=set_limits, env=env)
             if process.returncode != 0:
                 logger.warning(f"Sandbox: Unshare failed (code {process.returncode}). Stderr: {process.stderr}")
-                process = None # Force fallback
-        except Exception as e:
-            logger.warning(f"Sandbox: Unshare execution error: {e}")
+                process = None
+        except Exception:
             process = None
 
-    # Tier 3: Hardened Runtime Fallback (Python Audit Hooks)
+    # Tier 3: Hardened Runtime Fallback
     if process is None:
-        logger.warning(f"Sandbox: Kernel isolation failed. Falling back to Tier 3: Hardened Runtime (Audit Hooks).")
+        logger.warning(f"Sandbox: Kernel isolation failed. Falling back to Tier 3.")
         try:
             process = subprocess.run(
                 [python_bin, "wrapper.py"],
@@ -257,7 +269,7 @@ except Exception as e:
                 env=env,
             )
         except Exception as final_e:
-            return (False, "", f"Fail-Closed: All execution methods (including Hardened Runtime) failed. Error: {str(final_e)}", [])
+            return (False, "", f"Fail-Closed: All methods failed. Error: {str(final_e)}", [], {})
 
     # 7. Result Processing
     MAX_OUTPUT_SIZE = 100000
@@ -270,7 +282,20 @@ except Exception as e:
         if len(parts) > 1 and "---RESULT_END---" in parts[1]:
             result = parts[1].split("---RESULT_END---")[0].strip()
 
+    # 8. Check for M2M hire requests and File Outputs
     hire_requests = []
+    generated_files = {} # filename -> b64_content
+
+    # Collect files from outputs/
+    for f in os.listdir(output_dir):
+        f_path = os.path.join(output_dir, f)
+        if os.path.isfile(f_path):
+            try:
+                with open(f_path, "rb") as file_bytes:
+                    content = base64.b64encode(file_bytes.read()).decode()
+                    generated_files[f] = content
+            except Exception: pass
+
     hire_req_path = os.path.join(app_dir, "hire_request.json")
     if os.path.exists(hire_req_path):
         try:
@@ -280,4 +305,4 @@ except Exception as e:
                     hire_requests.append(data)
         except Exception: pass
 
-    return process.returncode == 0, result, stderr, hire_requests
+    return process.returncode == 0, result, stderr, hire_requests, generated_files

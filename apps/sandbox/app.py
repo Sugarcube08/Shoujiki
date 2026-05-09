@@ -22,7 +22,7 @@ class ExecutionRequest(BaseModel):
 @app.post("/execute")
 async def execute(req: ExecutionRequest):
     try:
-        success, output, error, hire_requests = run_agent_code(
+        success, output, error, hire_requests, generated_files = run_agent_code(
             agent_id=req.agent_id,
             files=req.files,
             requirements=req.requirements,
@@ -35,9 +35,16 @@ async def execute(req: ExecutionRequest):
             "output": output,
             "error": error,
             "hire_requests": hire_requests,
+            "generated_files": generated_files,
         }
     except Exception as e:
         import traceback
 
         traceback.print_exc()
-        return {"success": False, "output": "", "error": str(e), "hire_requests": []}
+        return {
+            "success": False,
+            "output": "",
+            "error": str(e),
+            "hire_requests": [],
+            "generated_files": {},
+        }

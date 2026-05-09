@@ -26,21 +26,24 @@ async def run_agent(
     current_user: str = Depends(get_current_user),
 ):
     # 1. VACN Security: Verify Wallet Signature
-    signature = request.headers.get("X-Payment-Signature")
-    if not signature:
-        raise HTTPException(status_code=400, detail="Missing X-Payment-Signature header")
+    if not req.session_id:
+        signature = request.headers.get("X-Payment-Signature")
+        if not signature:
+            raise HTTPException(status_code=400, detail="Missing X-Payment-Signature header")
 
-    message_dict = {
-        "agent_id": req.agent_id,
-        "input_data": req.input_data,
-        "task_id": req.task_id,
-    }
-    message_json = json.dumps(message_dict, separators=(",", ":"))
-    message_bytes = message_json.encode()
+        message_dict = {
+            "agent_id": req.agent_id,
+            "input_data": req.input_data,
+            "task_id": req.task_id,
+        }
+        message_json = json.dumps(message_dict, separators=(",", ":"))
+        message_bytes = message_json.encode()
 
-    is_valid = verify_signature(current_user, signature, message_bytes)
-    if not is_valid:
-        logger.warning(f"VACN: Signature verification failed for user {current_user}")
+        is_valid = verify_signature(current_user, signature, message_bytes)
+        if not is_valid:
+            logger.warning(f"VACN: Signature verification failed for user {current_user}")
+    else:
+        logger.info(f"SWARM_OS: Session {req.session_id} active, bypassing per-task signature.")
 
     # 2. Get agent
     agent = await agent_service.get_agent(db, req.agent_id)
@@ -58,6 +61,7 @@ async def run_agent(
         id=req.task_id,
         agent_id=agent.id,
         user_wallet=current_user,
+        session_id=req.session_id,
         input_data=json.dumps(req.input_data),
         status="queued",
     )
@@ -215,6 +219,21 @@ async def list_my_tasks(
     
     result = await db.execute(query.order_by(Task.created_at.desc()))
     return result.scalars().all()
+
+
+@router.get("/tasks/{task_id}", response_model=TaskHistoryResponse)
+async def get_task_status(
+    task_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    result = await db.execute(select(Task).where(Task.id == task_id))
+    task = result.scalars().first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.user_wallet != current_user:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return task
 
 
 @router.get("/me", response_model=List[AgentResponse])

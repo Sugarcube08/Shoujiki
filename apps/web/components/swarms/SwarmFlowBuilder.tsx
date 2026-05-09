@@ -20,7 +20,7 @@ import {
   MarkerType
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Play, Square, Bot, GitBranch, Save, Trash2, Zap } from 'lucide-react';
+import { Play, Square, Bot, GitBranch, Save, Trash2, Zap, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { validateWorkflow } from '@/lib/api';
@@ -79,10 +79,21 @@ const AgentNode = ({ id, data }: NodeProps) => {
         </div>
         
         {selectedAgent && (
-          <div className="p-2 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
-            <p className="text-[9px] text-zinc-400 line-clamp-2 leading-relaxed">
-              {selectedAgent.description || 'No description provided.'}
-            </p>
+          <div className="space-y-2">
+            <div className="p-2 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
+              <p className="text-[9px] text-zinc-400 line-clamp-2 leading-relaxed">
+                {selectedAgent.description || 'No description provided.'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-1 pt-1">
+              <label className="text-[8px] text-zinc-600 uppercase font-black tracking-tighter">Sample Trace Output</label>
+              <textarea 
+                placeholder="Agent response for dry-runs..." 
+                className="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[9px] font-medium text-zinc-400 outline-none focus:border-orange-500/30 resize-none transition-all"
+                value={data.sample_output as string || ''}
+                onChange={(e) => (data as any).onChange(id, 'sample_output', e.target.value)}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -142,11 +153,86 @@ const ConditionNode = ({ id, data }: NodeProps) => (
   </div>
 );
 
+const IntentNode = ({ id, data }: NodeProps) => {
+  const paths = data.paths as Record<string, any> || {
+    'path_1': { anchors: 'refund, money, return', label: 'Refund' },
+    'path_2': { anchors: 'help, support, bug', label: 'Support' }
+  };
+
+  const updatePath = (pathId: string, field: string, value: string) => {
+    const newPaths = { ...paths };
+    newPaths[pathId] = { ...newPaths[pathId], [field]: value };
+    (data as any).onChange(id, 'paths', newPaths);
+  };
+
+  const addPath = () => {
+    const newId = `path_${Object.keys(paths).length + 1}`;
+    const newPaths = { ...paths, [newId]: { anchors: '', label: `Intent ${Object.keys(paths).length + 1}` } };
+    (data as any).onChange(id, 'paths', newPaths);
+  };
+
+  const removePath = (pathId: string) => {
+    if (Object.keys(paths).length <= 1) return;
+    const newPaths = { ...paths };
+    delete newPaths[pathId];
+    (data as any).onChange(id, 'paths', newPaths);
+  };
+
+  return (
+    <div className={`${nodeStyle} border-orange-500/50 bg-orange-500/5 min-w-[280px]`}>
+      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-orange-500 border-2 border-[#0c0c0e]" />
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 text-orange-400 font-bold tracking-widest text-[10px] uppercase">
+          <Zap size={12} className="fill-orange-400/20" /> Semantic Router
+        </div>
+        <button onClick={addPath} className="p-1 hover:bg-orange-500/20 rounded text-orange-500 transition-colors">
+          <Plus size={10} />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {Object.entries(paths).map(([pathId, config]) => (
+          <div key={pathId} className="relative bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50 group/path">
+            <div className="flex items-center justify-between mb-1.5">
+              <input 
+                className="bg-transparent text-[9px] font-black uppercase text-zinc-300 outline-none w-2/3"
+                value={config.label}
+                onChange={(e) => updatePath(pathId, 'label', e.target.value)}
+              />
+              <button onClick={() => removePath(pathId)} className="opacity-0 group-hover/path:opacity-100 text-zinc-600 hover:text-red-400 transition-all">
+                <Trash2 size={10} />
+              </button>
+            </div>
+            <textarea 
+              placeholder="Keywords (anchors)..."
+              className="w-full bg-zinc-900 border border-zinc-800/50 rounded p-1.5 text-[9px] font-mono text-zinc-400 outline-none focus:border-orange-500/30 resize-none h-12"
+              value={config.anchors}
+              onChange={(e) => updatePath(pathId, 'anchors', e.target.value)}
+            />
+            
+            {/* Semantic Handle */}
+            <div className="absolute -right-7 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <span className="text-[7px] font-bold text-orange-500/60 uppercase pointer-events-none">Path</span>
+              <Handle 
+                type="source" 
+                position={Position.Right} 
+                id={pathId}
+                className="w-3 h-3 bg-orange-500 border-2 border-[#0c0c0e]" 
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const nodeTypes = {
   START: StartNode,
   END: EndNode,
   AGENT: AgentNode,
   CONDITION: ConditionNode,
+  INTENT: IntentNode,
 };
 
 // --- Flow Builder Component ---
@@ -221,9 +307,9 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
     );
   }, [setNodes]);
 
-  // Inject agents and updateNodeData into agent/condition nodes
+  // Inject agents and updateNodeData into agent/condition/intent nodes
   const nodesWithData = nodes.map(node => {
-    if (node.type === 'AGENT' || node.type === 'CONDITION') {
+    if (node.type === 'AGENT' || node.type === 'CONDITION' || node.type === 'INTENT') {
       return {
         ...node,
         data: {
@@ -264,11 +350,21 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
         y: event.clientY - reactFlowBounds.top - 50,
       };
 
+      let initialData = {};
+      if (type === 'AGENT') initialData = { agent_id: '', sample_output: 'Standard successful execution response.' };
+      else if (type === 'CONDITION') initialData = { field: '', value: '' };
+      else if (type === 'INTENT') initialData = {
+        paths: {
+          'path_1': { anchors: 'yes, success, okay', label: 'Positive' },
+          'path_2': { anchors: 'no, fail, error', label: 'Negative' }
+        }
+      };
+
       const newNode = {
         id: `${type.toLowerCase()}_${Math.random().toString(36).substr(2, 5)}`,
         type,
         position,
-        data: type === 'AGENT' ? { agent_id: '' } : { field: '', value: '' },
+        data: initialData,
       };
 
       setNodes((nds) => nds.concat(newNode));
@@ -340,6 +436,18 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
               <p className="text-[9px] text-zinc-500 font-medium">Conditional routing</p>
             </div>
           </div>
+
+          <div 
+            className="p-4 rounded-xl border border-orange-500/30 bg-orange-500/5 flex items-center gap-3 cursor-grab hover:bg-orange-500/10 transition-colors"
+            onDragStart={(e) => e.dataTransfer.setData('application/reactflow', 'INTENT')}
+            draggable
+          >
+            <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400"><Zap size={16} className="fill-orange-400/20" /></div>
+            <div>
+              <p className="text-xs font-bold text-zinc-200">Intent Router</p>
+              <p className="text-[9px] text-zinc-500 font-medium">Semantic multi-path</p>
+            </div>
+          </div>
         </div>
 
         <div className="p-5 border-t border-zinc-800 bg-zinc-900/30 space-y-4">
@@ -352,8 +460,8 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
 
           <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-950/50">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-300">Simulation Mode</span>
-              <span className="text-[8px] text-zinc-500 font-medium italic">No-cost dry run</span>
+              <span className="text-[10px] font-bold text-zinc-300">Visual Trace Mode</span>
+              <span className="text-[8px] text-zinc-500 font-medium italic">Local zero-cost traversal</span>
             </div>
             <input 
               type="checkbox" 
@@ -378,7 +486,7 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
             isLoading={isLoading || isValidating}
             disabled={!name || nodes.length < 2 || validationErrors.length > 0}
           >
-            <Zap size={14} /> {isSimulation ? 'Simulate Swarm' : 'Register Swarm'}
+            <Zap size={14} /> {isSimulation ? 'Trace Swarm' : 'Register Swarm'}
           </Button>
         </div>
       </div>

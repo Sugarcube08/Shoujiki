@@ -44,6 +44,8 @@ class ArciumClient:
         if env_vars is None:
             env_vars = {}
 
+        generated_files = {}
+
         try:
             # 1. Input Commitment
             input_bytes = json.dumps(input_data, sort_keys=True).encode()
@@ -112,6 +114,9 @@ class ArciumClient:
                         output_data = parsed_out if isinstance(parsed_out, dict) else {"status": "success", "data": parsed_out}
                     except Exception:
                         output_data = {"status": "success", "data": sandbox_result.get("output")}
+                    
+                    # Capture file artifacts
+                    generated_files = sandbox_result.get("generated_files", {})
                 else:
                     output_data = {"status": "failed", "error": sandbox_result.get("error")}
 
@@ -130,8 +135,7 @@ class ArciumClient:
             }
             manifest_json = json.dumps(receipt_manifest, sort_keys=True)
             
-            # Sign the manifest hash with the platform keypair (acting as the verifier/executor)
-            # The frontend verifies against the hash, so we sign the hash hex string bytes.
+            # Sign the manifest hash with the platform keypair
             manifest_hash = hashlib.sha256(manifest_json.encode()).hexdigest()
             signature = self.enclave_keypair.sign_message(manifest_hash.encode())
             receipt_sig = f"{manifest_hash}:{base58.b58encode(bytes(signature)).decode()}"
@@ -140,7 +144,8 @@ class ArciumClient:
                 "result": output_data,
                 "execution_receipt": receipt_sig,
                 "manifest": receipt_manifest,
-                "enclave_pubkey": str(self.enclave_keypair.pubkey())
+                "enclave_pubkey": str(self.enclave_keypair.pubkey()),
+                "generated_files": generated_files
             }
 
         except Exception as e:

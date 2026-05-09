@@ -50,6 +50,23 @@ class Agent(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class AgentSession(Base):
+    __tablename__ = "agent_sessions"
+
+    id = Column(String, primary_key=True, index=True)
+    user_wallet = Column(String, nullable=False, index=True)
+    agent_id = Column(String, ForeignKey("agents.id", ondelete="CASCADE"), nullable=False)
+    
+    total_input_tokens = Column(Float, default=0.0)
+    total_output_tokens = Column(Float, default=0.0)
+    aggregated_cost = Column(Float, default=0.0)
+    
+    status = Column(String, default="active") # active, settled, cancelled
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -58,6 +75,7 @@ class Task(Base):
         String, ForeignKey("agents.id", ondelete="CASCADE"), nullable=False
     )
     user_wallet = Column(String, nullable=False, index=True)
+    session_id = Column(String, ForeignKey("agent_sessions.id", ondelete="SET NULL"), nullable=True)
     input_data = Column(Text, nullable=False)
     result = Column(Text, nullable=True)
     status = Column(
@@ -71,6 +89,8 @@ class Task(Base):
 
     # Practical Verifiable Receipt
     poae_hash = Column(String, nullable=True)  # Verifiable Execution Receipt Manifest Hash
+
+    generated_files = Column(JSON, nullable=True) # filename -> b64_content
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

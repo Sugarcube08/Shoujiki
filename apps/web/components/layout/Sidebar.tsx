@@ -18,12 +18,11 @@ const navItems = [
   { label: 'Fleet Overview', href: '/my-agents', icon: LayoutGrid },
   { label: 'Marketplace', href: '/marketplace', icon: ShoppingCart },
   { label: 'Labor Exchange', href: '/marketplace/labor', icon: Briefcase },
+  { label: 'Agent Chat', href: '/chat', icon: Sparkles },
   { label: 'Swarm Builder', href: '/swarms', icon: Layers },
   { label: 'Task History', href: '/executions', icon: Terminal },
   { label: 'Protocol Bench', href: '/dev', icon: Code2 },
   { label: 'Treasury', href: '/wallet', icon: Landmark },
-  { label: 'Proof Explorer', href: '/explorer', icon: FileSearch },
-  { label: 'Dispute Portal', href: '/disputes', icon: ShieldAlert },
 ];
 
 export const Sidebar = () => {

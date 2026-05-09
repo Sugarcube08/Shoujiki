@@ -4,7 +4,7 @@ import uuid
 from arq import create_pool, cron
 from arq.connections import RedisSettings
 from modules.protocols.arcium_client import ArciumClient
-from db.models.models import Task, Workflow, WorkflowRun, Agent, MarketOrder
+from db.models.models import Task, Workflow, WorkflowRun, Agent, MarketOrder, AgentSession
 from sqlalchemy import select
 from db.session import AsyncSessionLocal
 from core.config import (
@@ -108,16 +108,25 @@ async def run_agent_task(
             db_task.poae_hash = receipt_sig
             db_task.input_tokens = input_tokens
             db_task.output_tokens = output_tokens
+            db_task.generated_files = exec_envelope.get("generated_files", {})
 
             # Update Agent Stats
             agent.total_runs += 1
             actual_cost = 0.0
             if is_success:
                 agent.successful_runs += 1
-                # Deduct from User based on tokens (Credits Agent Creator)
-                actual_cost = await treasury_service.deduct_agentic_fee(
-                    db, db_task.user_wallet, agent.id, input_tokens, output_tokens
-                )
+                
+                # Check for session-based billing
+                if db_task.session_id:
+                    # Accrue cost to the session
+                    actual_cost = await treasury_service.accrue_session_cost(
+                        db, db_task.session_id, input_tokens, output_tokens
+                    )
+                else:
+                    # Legacy: Deduct from User immediately
+                    actual_cost = await treasury_service.deduct_agentic_fee(
+                        db, db_task.user_wallet, agent.id, input_tokens, output_tokens
+                    )
 
             await db.commit()
             await redis_pubsub.publish(
@@ -127,7 +136,8 @@ async def run_agent_task(
                     "result": result_data,
                     "receipt_hash": receipt_sig,
                     "cost_deducted": actual_cost,
-                    "tokens": {"in": input_tokens, "out": output_tokens}
+                    "tokens": {"in": input_tokens, "out": output_tokens},
+                    "generated_files": db_task.generated_files
                 }),
             )
 
@@ -279,6 +289,52 @@ async def process_market_matching(ctx):
             await engine.trigger_autonomous_bidding(db, order.id)
 
 
+def local_semantic_match(output_text, paths_config):
+    """
+    Local Semantic Matcher (Algorithmic).
+    Decides the best path by analyzing word overlap with natural language anchors.
+    Zero-cost, deterministic, and production-ready.
+    """
+    if not isinstance(output_text, str):
+        output_text = str(output_text)
+    
+    text = output_text.lower()
+    # Basic tokenization
+    import re
+    words = set(re.findall(r'\w+', text))
+    
+    best_handle = None
+    best_score = -1.0
+    
+    # paths_config: { handle: { "anchors": ["list", "of", "keywords"], "desc": "optional" } }
+    for handle, config in paths_config.items():
+        anchors = config.get("anchors", [])
+        if not anchors:
+            continue
+            
+        # Calculate overlap score
+        matches = 0
+        for anchor in anchors:
+            anchor_lower = anchor.lower()
+            if anchor_lower in text: # Substring match for phrases
+                matches += 2
+            
+            anchor_words = set(re.findall(r'\w+', anchor_lower))
+            overlap = words.intersection(anchor_words)
+            matches += len(overlap)
+            
+        score = matches / (len(anchors) + 1)
+        if score > best_score:
+            best_score = score
+            best_handle = handle
+            
+    # Default to the first path if confidence is zero
+    if best_handle is None or best_score <= 0:
+        return list(paths_config.keys())[0] if paths_config else "default"
+        
+    return best_handle
+
+
 async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: dict):
     logger.info(f"SWARM_OS: Orchestrating graph run {run_id}")
     redis_pubsub = ctx["redis_pubsub"]
@@ -345,7 +401,7 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
                     try:
                         current_ver = next((v for v in agent.versions if v["version"] == agent.current_version), agent.versions[-1])
                         
-                        # Billing: Skip for simulation
+                        # Billing: Skip for trace/simulation
                         if not is_simulation:
                             from modules.billing import treasury_service
                             is_solvent = await treasury_service.check_user_solvency(db, run.user_wallet, 0.0001)
@@ -362,20 +418,20 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
                             )
                             node_result = envelope.get("result", {})
                             
-                            # Billing: Deduct fee
+                            # Billing: Deduct fee (usage-linked)
                             await treasury_service.deduct_agentic_fee(
                                 db, run.user_wallet, agent.id, 
                                 len(json.dumps(last_output))//4, 
                                 len(json.dumps(node_result))//4
                             )
                         else:
-                            # SIMULATION MODE: Mock output or pass-through
-                            logger.info(f"SWARM_OS: [SIMULATION] Mocking execution for {agent.name}")
+                            # ZERO-COST TRACE: Do not execute. Use static trace output.
+                            logger.info(f"SWARM_OS: [TRACE] Using static trace output for {agent.name}")
+                            trace_data = node['config'].get('sample_output', "Protocol Trace: Successful execution simulated.")
                             node_result = {
-                                "status": 200, 
-                                "data": f"Simulation output for {agent.name}", 
-                                "original_input": last_output,
-                                "is_simulation": True
+                                "status": "success", 
+                                "data": trace_data, 
+                                "is_trace": True
                             }
                     except Exception as e:
                         logger.error(f"SWARM_OS: Agent node {node_id} failed: {e}")
@@ -411,6 +467,35 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
                 run.results['steps'].append({"node_id": node_id, "type": "CONDITION", "result": {"met": condition_met, "handle": handle}})
                 await db.commit()
                 continue 
+
+            elif node['type'] == 'INTENT':
+                # LOCAL ALGORITHMIC INTENT ROUTING
+                paths_config = node['config'].get('paths', {}) # { handle: { "anchors": [...] } }
+                
+                # Analyze output from previous node
+                output_to_analyze = last_output
+                if isinstance(last_output, dict):
+                    # Try to find meaningful text in common keys
+                    output_to_analyze = last_output.get("data", last_output.get("message", last_output.get("response", str(last_output))))
+                
+                handle = local_semantic_match(output_to_analyze, paths_config)
+                
+                logger.info(f"SWARM_OS: Intent Router {node_id} chose path: {handle}")
+                
+                next_edges = [e for e in edges_list if e['source'] == node_id and e.get('source_handle') == handle]
+                if not next_edges:
+                    next_edges = [e for e in edges_list if e['source'] == node_id]
+                
+                for e in next_edges:
+                    queue.append(e['target'])
+                
+                run.results['steps'].append({
+                    "node_id": node_id, 
+                    "type": "INTENT", 
+                    "result": {"selected_path": handle}
+                })
+                await db.commit()
+                continue
 
             elif node['type'] == 'END':
                 run.status = "completed"

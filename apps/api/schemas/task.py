@@ -7,6 +7,7 @@ class RunRequest(BaseModel):
     agent_id: str
     task_id: str
     input_data: dict
+    session_id: Optional[str] = None
 
 
 class TaskResponse(BaseModel):

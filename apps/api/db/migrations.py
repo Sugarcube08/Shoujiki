@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from db.session import Base
 
 # Import models to ensure they are registered with Base.metadata
+from db.models.models import UserWallet, Agent, Task, Workflow, WorkflowRun, MarketOrder, Bid, AgentSession
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ async def run_consolidated_migrations(engine: AsyncEngine):
             # Tasks
             ("tasks", "agent_id", "VARCHAR"),
             ("tasks", "user_wallet", "VARCHAR"),
+            ("tasks", "session_id", "VARCHAR REFERENCES agent_sessions(id) ON DELETE SET NULL"),
             ("tasks", "input_data", "TEXT"),
             ("tasks", "result", "TEXT"),
             ("tasks", "status", "VARCHAR DEFAULT 'queued'"),
@@ -49,6 +51,7 @@ async def run_consolidated_migrations(engine: AsyncEngine):
             ("tasks", "input_tokens", "FLOAT DEFAULT 0.0"),
             ("tasks", "output_tokens", "FLOAT DEFAULT 0.0"),
             ("tasks", "poae_hash", "VARCHAR"),
+            ("tasks", "generated_files", "JSON"),
             
             # Workflows
             ("workflows", "name", "VARCHAR"),

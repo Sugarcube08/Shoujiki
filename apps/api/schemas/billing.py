@@ -24,3 +24,7 @@ class TransactionResponse(BaseModel):
     message: str
     tx_signature: str
     new_balance: float
+
+
+class SessionCreate(BaseModel):
+    agent_id: str
