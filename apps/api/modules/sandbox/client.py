@@ -1,9 +1,10 @@
 import httpx
-from backend.core.config import SANDBOX_URL
+from core.config import SANDBOX_URL
 import json
 
 
 async def execute_in_sandbox(
+    agent_id: str,
     files: dict,
     requirements: list,
     entrypoint: str,
@@ -21,11 +22,12 @@ async def execute_in_sandbox(
 
     last_error = ""
     for url in unique_urls:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=150.0) as client:
             try:
                 response = await client.post(
                     f"{url}/execute",
                     json={
+                        "agent_id": agent_id,
                         "files": files,
                         "requirements": requirements,
                         "entrypoint": entrypoint,

@@ -3,8 +3,8 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update
-from backend.db.models.models import MarketOrder, Bid, Dispute, Agent, Task
-from backend.schemas.marketplace import (
+from db.models.models import MarketOrder, Bid, Dispute, Agent, Task
+from schemas.marketplace import (
     MarketOrderCreate,
     BidCreate,
     DisputeCreate,

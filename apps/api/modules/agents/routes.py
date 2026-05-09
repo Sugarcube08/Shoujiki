@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional
-from backend.db.session import get_db
-from backend.schemas.agent import AgentCreate, AgentResponse, AgentTestRequest
-from backend.schemas.task import RunRequest, TaskResponse, TaskHistoryResponse
-from backend.modules.agents import service as agent_service
-from backend.db.models.models import Task
-from backend.core.dependencies import get_current_user
-from backend.core.security import verify_signature
-from backend.modules.agents.validation import validate_agent_code
+from db.session import get_db
+from schemas.agent import AgentCreate, AgentResponse, AgentTestRequest
+from schemas.task import RunRequest, TaskResponse, TaskHistoryResponse
+from modules.agents import service as agent_service
+from db.models.models import Task
+from core.dependencies import get_current_user
+from core.security import verify_signature
+from modules.agents.validation import validate_agent_code
 import logging
 import json
 
@@ -48,7 +48,7 @@ async def run_agent(
         raise HTTPException(status_code=404, detail="Agent not found")
 
     # 3. Agentic Billing: Solvency Check
-    from backend.modules.billing import treasury_service
+    from modules.billing import treasury_service
     is_solvent = await treasury_service.check_user_solvency(db, current_user, 0.0001)
     if not is_solvent:
         raise HTTPException(status_code=402, detail="Insufficient funds in App Wallet.")
@@ -89,12 +89,12 @@ async def test_agent(
     if not valid:
         raise HTTPException(status_code=400, detail=msg)
 
-    from backend.modules.protocols.arcium_client import ArciumClient
+    from modules.protocols.arcium_client import ArciumClient
     arcium = ArciumClient()
 
     try:
         envelope = await arcium.execute_confidential_task(
-            "test_node",
+            req.id,
             req.files,
             req.input_data or {"test": True},
             req.requirements,
@@ -110,7 +110,7 @@ async def test_agent(
 async def list_tasks(
     status: Optional[str] = None, limit: int = 50, db: AsyncSession = Depends(get_db)
 ):
-    from backend.db.models.models import Task
+    from db.models.models import Task
     query = select(Task).order_by(Task.created_at.desc())
     if status:
         query = query.where(Task.status == status)

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Float, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.sql import func
-from backend.db.session import Base
+from db.session import Base
 
 
 class UserWallet(Base):

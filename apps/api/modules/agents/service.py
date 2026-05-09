@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from backend.db.models.models import Agent
-from backend.schemas.agent import AgentCreate
+from db.models.models import Agent
+from schemas.agent import AgentCreate
 import logging
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ import os
 import tempfile
 import base58
 from typing import Dict
-from backend.core.config import PLATFORM_SECRET_SEED_BYTES
+from core.config import PLATFORM_SECRET_SEED_BYTES
 from solders.keypair import Keypair
 
 logger = logging.getLogger(__name__)
@@ -103,8 +103,8 @@ class ArciumClient:
                 execution_trace = "real_wasm_vm"
             else:
                 logger.info("VACN_COMPUTE: Executing Python source via sandbox.")
-                from backend.modules.sandbox.client import execute_in_sandbox
-                sandbox_result = await execute_in_sandbox(files, requirements, entrypoint, input_data, env_vars)
+                from modules.sandbox.client import execute_in_sandbox
+                sandbox_result = await execute_in_sandbox(agent_id, files, requirements, entrypoint, input_data, env_vars)
 
                 if sandbox_result.get("success"):
                     try:

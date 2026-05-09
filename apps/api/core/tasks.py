@@ -3,11 +3,11 @@ import logging
 import uuid
 from arq import create_pool, cron
 from arq.connections import RedisSettings
-from backend.modules.protocols.arcium_client import ArciumClient
-from backend.db.models.models import Task, Workflow, WorkflowRun, Agent, MarketOrder
+from modules.protocols.arcium_client import ArciumClient
+from db.models.models import Task, Workflow, WorkflowRun, Agent, MarketOrder
 from sqlalchemy import select
-from backend.db.session import AsyncSessionLocal
-from backend.core.config import (
+from db.session import AsyncSessionLocal
+from core.config import (
     REDIS_QUEUE_HOST,
     REDIS_QUEUE_PORT,
     REDIS_PUBSUB_HOST,
@@ -56,7 +56,7 @@ async def run_agent_task(
             return
 
         # 2. Protocol Security: Verify Funds (Agentic Billing)
-        from backend.modules.billing import treasury_service
+        from modules.billing import treasury_service
 
         is_solvent = await treasury_service.check_user_solvency(
             db, db_task.user_wallet, 0.0001
@@ -182,7 +182,7 @@ async def run_agent_bidding_evaluation(
         if not agent:
             return
 
-        from backend.modules.marketplace import service as market_service
+        from modules.marketplace import service as market_service
         order = await market_service.get_order_by_id(db, order_id)
         if not order:
             return
@@ -270,7 +270,7 @@ async def run_verifier_node_audit(ctx):
 
 
 async def process_market_matching(ctx):
-    from backend.modules.marketplace.matching_engine import MatchingEngine
+    from modules.marketplace.matching_engine import MatchingEngine
     engine = MatchingEngine()
     async with AsyncSessionLocal() as db:
         res = await db.execute(select(MarketOrder).where(MarketOrder.status == "open"))
@@ -347,7 +347,7 @@ async def run_workflow_task(ctx, run_id: str, workflow_id: str, initial_input: d
                         
                         # Billing: Skip for simulation
                         if not is_simulation:
-                            from backend.modules.billing import treasury_service
+                            from modules.billing import treasury_service
                             is_solvent = await treasury_service.check_user_solvency(db, run.user_wallet, 0.0001)
                             if not is_solvent:
                                 run.status = "failed"

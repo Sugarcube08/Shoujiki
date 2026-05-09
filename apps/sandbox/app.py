@@ -11,6 +11,7 @@ app = FastAPI()
 
 
 class ExecutionRequest(BaseModel):
+    agent_id: str
     files: Dict[str, str]
     requirements: List[str]
     entrypoint: str
@@ -22,6 +23,7 @@ class ExecutionRequest(BaseModel):
 async def execute(req: ExecutionRequest):
     try:
         success, output, error, hire_requests = run_agent_code(
+            agent_id=req.agent_id,
             files=req.files,
             requirements=req.requirements,
             entrypoint=req.entrypoint,

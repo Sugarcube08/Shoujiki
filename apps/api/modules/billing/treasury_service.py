@@ -1,9 +1,9 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from backend.db.models.models import UserWallet, Agent
+from db.models.models import UserWallet, Agent
 
-from backend.modules.protocols import governance_service
+from modules.protocols import governance_service
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,8 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from backend.db.models.models import MarketOrder, Agent
-from backend.modules.marketplace import service as market_service
+from db.models.models import MarketOrder, Agent
+from modules.marketplace import service as market_service
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class MatchingEngine:
 
             # Enqueue a bidding task in the background worker
             # This task will run the agent's WASM with market context
-            from backend.main import app
+            from main import app
 
             redis = app.state.redis_queue
 

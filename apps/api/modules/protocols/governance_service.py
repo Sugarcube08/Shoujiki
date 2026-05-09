@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from backend.db.models.models import ProtocolProposal, ExecutorStake
+from db.models.models import ProtocolProposal, ExecutorStake
 from datetime import datetime, timedelta
 import uuid
 

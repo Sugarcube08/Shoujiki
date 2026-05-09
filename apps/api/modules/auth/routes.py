@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from backend.schemas.auth import WalletLoginRequest, TokenResponse
-from backend.modules.auth.service import authenticate_wallet
+from schemas.auth import WalletLoginRequest, TokenResponse
+from modules.auth.service import authenticate_wallet
 
 router = APIRouter()
 

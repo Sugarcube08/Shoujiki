@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
-from backend.db.session import Base
+from db.session import Base
 
 # Import models to ensure they are registered with Base.metadata
 

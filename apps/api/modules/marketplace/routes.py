@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-from backend.db.session import get_db
-from backend.schemas.agent import AgentResponse
-from backend.schemas.marketplace import (
+from db.session import get_db
+from schemas.agent import AgentResponse
+from schemas.marketplace import (
     MarketOrderCreate,
     MarketOrderResponse,
     BidCreate,
@@ -12,8 +12,8 @@ from backend.schemas.marketplace import (
     DisputeResponse,
     DisputeResolve,
 )
-from backend.modules.marketplace import service as market_service
-from backend.core.dependencies import get_current_user
+from modules.marketplace import service as market_service
+from core.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -22,7 +22,7 @@ router = APIRouter()
 async def get_featured_agents(db: AsyncSession = Depends(get_db)):
     # Return 6 most recently created agents as featured
     from sqlalchemy import desc
-    from backend.db.models.models import Agent
+    from db.models.models import Agent
     from sqlalchemy.future import select
 
     result = await db.execute(select(Agent).order_by(desc(Agent.created_at)).limit(6))
@@ -56,7 +56,7 @@ async def place_agent_bid(
 ):
     """Allows an agent to bid on a market order."""
     # Verify the user owns the agent
-    from backend.modules.agents import service as agent_service
+    from modules.agents import service as agent_service
 
     agent = await agent_service.get_agent(db, req.agent_id)
     if not agent or agent.creator_wallet != current_user:
@@ -92,7 +92,7 @@ async def list_disputes(
     status: Optional[str] = None, db: AsyncSession = Depends(get_db)
 ):
     """Lists all open disputes in the market."""
-    from backend.db.models.models import Dispute
+    from db.models.models import Dispute
     from sqlalchemy.future import select
 
     query = select(Dispute)

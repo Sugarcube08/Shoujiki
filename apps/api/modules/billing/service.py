@@ -7,11 +7,11 @@ from solders.transaction import VersionedTransaction
 from solders.message import MessageV0
 from solana.rpc.async_api import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.core.config import (
+from core.config import (
     SOLANA_RPC_URL,
     PLATFORM_SECRET_SEED_BYTES,
 )
-from backend.db.session import AsyncSessionLocal
+from db.session import AsyncSessionLocal
 from sqlalchemy.future import select
 import logging
 
@@ -155,7 +155,7 @@ async def withdraw_agent_funds(agent_id: str, requester_wallet: str):
     Direct Payout Model: Transfers SOL from the Platform Authority directly to the Creator's Wallet.
     """
     async with AsyncSessionLocal() as db:
-        from backend.db.models.models import Agent
+        from db.models.models import Agent
 
         agent_res = await db.execute(select(Agent).where(Agent.id == agent_id))
         agent = agent_res.scalars().first()
@@ -196,7 +196,7 @@ async def withdraw_user_wallet_balance(
     """
     Withdraws funds from the User's Layer 2 App Wallet back to their Layer 1 Solana wallet.
     """
-    from backend.db.models.models import UserWallet
+    from db.models.models import UserWallet
 
     result = await db.execute(
         select(UserWallet).where(UserWallet.wallet_address == wallet_address)

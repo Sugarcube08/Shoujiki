@@ -12,10 +12,7 @@ class AgentValidator(ast.NodeVisitor):
         self.has_run_method = False
         self.has_agent_instance = False
 
-        # Flatten allowed imports for easy checking
-        self.allowed_imports = set()
-        for category in self.policy.get("allowed_imports", {}).values():
-            self.allowed_imports.update(category)
+        self.forbidden_imports = set(self.policy.get("forbidden_imports", []))
 
         self.forbidden_names = set(self.policy.get("forbidden_names", []))
         self.forbidden_attrs = set(self.policy.get("forbidden_attributes", []))
@@ -37,7 +34,7 @@ class AgentValidator(ast.NodeVisitor):
         except Exception:
             # Fallback to a minimal safe policy if file is missing
             return {
-                "allowed_imports": {"core": ["math", "json", "time"]},
+                "forbidden_imports": ["os", "sys", "subprocess", "shutil"],
                 "forbidden_names": ["eval", "exec", "open"],
                 "forbidden_attributes": ["__subclasses__"],
             }
@@ -45,11 +42,8 @@ class AgentValidator(ast.NodeVisitor):
     def visit_Import(self, node):
         for alias in node.names:
             base_module = alias.name.split(".")[0]
-            if (
-                base_module not in self.allowed_imports
-                and base_module not in self.local_modules
-            ):
-                self.errors.append(f"Import of '{base_module}' is not allowed.")
+            if base_module in self.forbidden_imports:
+                self.errors.append(f"Import of forbidden module '{base_module}' is not allowed.")
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node):
@@ -57,11 +51,8 @@ class AgentValidator(ast.NodeVisitor):
             return  # Allow relative imports
         if node.module:
             base_module = node.module.split(".")[0]
-            if (
-                base_module not in self.allowed_imports
-                and base_module not in self.local_modules
-            ):
-                self.errors.append(f"Import from '{base_module}' is not allowed.")
+            if base_module in self.forbidden_imports:
+                self.errors.append(f"Import from forbidden module '{base_module}' is not allowed.")
         self.generic_visit(node)
 
     def visit_Call(self, node):

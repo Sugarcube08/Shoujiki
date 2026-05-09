@@ -27,6 +27,7 @@ class AgentCreate(AgentBase):
 
 
 class AgentTestRequest(BaseModel):
+    id: str = Field(default="test-agent")
     files: Dict[str, str]
     requirements: List[str]
     entrypoint: str

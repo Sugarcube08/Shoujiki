@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.core.dependencies import get_current_user
-from backend.db.session import get_db
-from backend.modules.billing import service as billing_service
-from backend.modules.billing import treasury_service
-from backend.schemas.billing import UserWalletResponse, DepositRequest, WithdrawRequest, TransactionResponse
+from core.dependencies import get_current_user
+from db.session import get_db
+from modules.billing import service as billing_service
+from modules.billing import treasury_service
+from schemas.billing import UserWalletResponse, DepositRequest, WithdrawRequest, TransactionResponse
 
 router = APIRouter()
 

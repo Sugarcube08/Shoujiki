@@ -32,7 +32,7 @@ services:
       REDIS_PUBSUB_HOST: redis-pubsub
       REDIS_PASSWORD: shoujiki_v3_secure_redis_2026
       SANDBOX_URL: http://sandbox:8001
-      PYTHONPATH: /app/api
+      PYTHONPATH: /app
       SECRET_KEY: "change-this-to-a-secure-random-string-in-production"
       PLATFORM_SECRET_SEED: "shoujiki_platform_secret_seed_32_chars"
       SQUADS_MULTISIG_PDA: "GcUqEvuzyvTPZi38wqtFSvoDwT3yuc8gYCAmCJgyRyG5"
@@ -48,14 +48,14 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
-    command: python3 -m arq backend.core.tasks.WorkerSettings
+    command: python3 -m arq core.tasks.WorkerSettings
     environment:
       DATABASE_URL: postgresql+asyncpg://shoujiki:shoujiki_v3_secure_db_2026@db:5432/shoujiki
       REDIS_QUEUE_HOST: redis-queue
       REDIS_PUBSUB_HOST: redis-pubsub
       REDIS_PASSWORD: shoujiki_v3_secure_redis_2026
       SANDBOX_URL: http://sandbox:8001
-      PYTHONPATH: /app/api
+      PYTHONPATH: /app
       PLATFORM_SECRET_SEED: "shoujiki_platform_secret_seed_32_chars"
       SOLANA_RPC_URL: "https://api.devnet.solana.com"
     depends_on:
@@ -67,6 +67,12 @@ services:
     build:
       context: ./apps/sandbox
       dockerfile: Dockerfile
+    environment:
+      SANDBOX_STORAGE_PATH: /home/sandboxuser/app/agent_data
+    volumes:
+      - sandbox_data:/home/sandboxuser/app/agent_data
+    cap_add:
+      - SYS_ADMIN
     ports:
       - "8001:8001"
 
@@ -84,3 +90,4 @@ services:
 
 volumes:
   postgres_data:
+  sandbox_data:

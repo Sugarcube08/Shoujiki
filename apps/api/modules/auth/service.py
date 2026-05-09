@@ -1,6 +1,6 @@
 from solders.pubkey import Pubkey
 from solders.signature import Signature
-from backend.core.security import create_access_token
+from core.security import create_access_token
 
 
 def verify_wallet_signature(public_key_str: str, signature_str: str, message_str: str):

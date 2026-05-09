@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
-from backend.db.session import get_db
-from backend.core.dependencies import get_current_user
-from backend.modules.protocols import governance_service
-from backend.schemas.governance import (
+from db.session import get_db
+from core.dependencies import get_current_user
+from modules.protocols import governance_service
+from schemas.governance import (
     ProposalCreate,
     ProposalResponse,
     StakeRequest,
     NetworkStats,
 )
-from backend.db.models.models import ProtocolProposal, ExecutorStake
+from db.models.models import ProtocolProposal, ExecutorStake
 from sqlalchemy.future import select
 from sqlalchemy import func
 

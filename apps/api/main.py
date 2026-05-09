@@ -2,22 +2,22 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from backend.db.session import engine, get_db
+from db.session import engine, get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from backend.modules.auth.routes import router as auth_router
-from backend.modules.agents.routes import router as agents_router
-from backend.modules.billing.routes import router as billing_router
-from backend.modules.workflows.routes import router as workflows_router
-from backend.modules.marketplace.routes import router as marketplace_router
-from backend.modules.protocols.routes import router as protocol_router
-from backend.modules.auth.middleware import X402PaymentMiddleware
+from modules.auth.routes import router as auth_router
+from modules.agents.routes import router as agents_router
+from modules.billing.routes import router as billing_router
+from modules.workflows.routes import router as workflows_router
+from modules.marketplace.routes import router as marketplace_router
+from modules.protocols.routes import router as protocol_router
+from modules.auth.middleware import X402PaymentMiddleware
 from arq import create_pool
 from arq.connections import RedisSettings
 import logging
 import json
 import asyncio
-from backend.core.config import (
+from core.config import (
     REDIS_QUEUE_HOST,
     REDIS_QUEUE_PORT,
     REDIS_PUBSUB_HOST,
@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
     logger.info("Redis connections initialized.")
 
     # Startup: Ensure tables exist and migrate
-    from backend.db.migrations import run_consolidated_migrations
+    from db.migrations import run_consolidated_migrations
     max_retries = 5
     for i in range(max_retries):
         try:
@@ -138,13 +138,13 @@ async def health_check():
 
 @app.get("/config")
 async def get_config():
-    from backend.modules.billing.service import PLATFORM_WALLET
+    from modules.billing.service import PLATFORM_WALLET
     return {"platform_wallet": PLATFORM_WALLET}
 
 
 @app.get("/stats")
 async def get_stats(db: AsyncSession = Depends(get_db)):
-    from backend.db.models.models import Agent, Task
+    from db.models.models import Agent, Task
     from sqlalchemy import func
 
     agent_count = await db.execute(select(func.count(Agent.id)))

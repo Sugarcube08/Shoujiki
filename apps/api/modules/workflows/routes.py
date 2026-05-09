@@ -5,9 +5,9 @@ from typing import List
 import uuid
 import logging
 
-from backend.db.session import get_db
-from backend.db.models.models import Workflow, WorkflowRun, Agent
-from backend.schemas.workflow import (
+from db.session import get_db
+from db.models.models import Workflow, WorkflowRun, Agent
+from schemas.workflow import (
     WorkflowCreate,
     WorkflowResponse,
     WorkflowRunRequest,
@@ -17,7 +17,7 @@ from backend.schemas.workflow import (
     WorkflowBase,
     NodeType,
 )
-from backend.core.dependencies import get_current_user
+from core.dependencies import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ async def run_workflow(
         raise HTTPException(status_code=404, detail="Workflow not found")
 
     # 2. Agentic Billing: Pre-execution Solvency Check
-    from backend.modules.billing import treasury_service
+    from modules.billing import treasury_service
 
     is_solvent = await treasury_service.check_user_solvency(
         db, current_user, 0.001 # Baseline check to start

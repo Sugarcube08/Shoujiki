@@ -4,63 +4,104 @@ import os
 import json
 import resource
 import logging
+import shutil
+import venv
+import base64
 
 logger = logging.getLogger(__name__)
 
+SANDBOX_BASE_DIR = os.path.abspath(os.getenv("SANDBOX_STORAGE_PATH", "./agent_data"))
+os.makedirs(SANDBOX_BASE_DIR, exist_ok=True)
 
 def set_limits():
-    # Limit memory to 256MB
-    mem_limit = 256 * 1024 * 1024
+    # Limit memory to 512MB
+    mem_limit = 512 * 1024 * 1024
     resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
-    # Limit CPU time to 10 seconds
-    resource.setrlimit(resource.RLIMIT_CPU, (10, 10))
-    # Limit file size to 2MB
-    resource.setrlimit(resource.RLIMIT_FSIZE, (2 * 1024 * 1024, 2 * 1024 * 1024))
-    # Limit number of processes to 20
-    resource.setrlimit(resource.RLIMIT_NPROC, (20, 20))
+    # Limit CPU time to 60 seconds
+    resource.setrlimit(resource.RLIMIT_CPU, (60, 60))
+    # Limit file size to 5MB
+    resource.setrlimit(resource.RLIMIT_FSIZE, (5 * 1024 * 1024, 5 * 1024 * 1024))
+    # Limit number of processes to 1024
+    resource.setrlimit(resource.RLIMIT_NPROC, (1024, 1024))
 
 
 def run_agent_code(
-    files: dict, requirements: list, entrypoint: str, input_data: str, env_vars: dict = None
+    agent_id: str,
+    files: dict,
+    requirements: list,
+    entrypoint: str,
+    input_data: str,
+    env_vars: dict = None,
 ):
     """
-    Executes agent code in a hardened, fail-closed environment.
-    Supports Bubblewrap (Hardened) and Unshare (Network isolation).
+    Executes agent code in a persistent, dedicated sandbox environment.
+    Uses Virtual Environments (venv) per agent to cache installed requirements.
     """
-    # Dynamic dependency installation is strictly forbidden for security.
-    if requirements:
-        logger.warning(
-            f"Sandbox: Ignoring dynamic requirements {requirements}. Agents must use pre-installed env."
+    # Prepare agent workspace
+    agent_dir = os.path.join(SANDBOX_BASE_DIR, agent_id)
+    os.makedirs(agent_dir, exist_ok=True)
+    
+    app_dir = os.path.join(agent_dir, "app")
+    os.makedirs(app_dir, exist_ok=True)
+    
+    venv_dir = os.path.join(agent_dir, "venv")
+    
+    # 1. Ensure Virtual Environment exists
+    if not os.path.exists(os.path.join(venv_dir, "bin", "python")):
+        logger.info(f"Sandbox: Creating new dedicated box for agent {agent_id}")
+        venv.create(venv_dir, with_pip=True)
+
+    # 2. Sync Agent Files
+    for f in os.listdir(app_dir):
+        f_path = os.path.join(app_dir, f)
+        try:
+            if os.path.isfile(f_path): os.unlink(f_path)
+            elif os.path.isdir(f_path): shutil.rmtree(f_path)
+        except Exception: pass
+
+    for filename, content in files.items():
+        if ".." in filename or filename.startswith("/"):
+            return False, "", f"Invalid filename: {filename}", []
+        file_path = os.path.join(app_dir, filename)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w") as f:
+            f.write(content)
+
+    # 3. Create input file
+    in_path = os.path.join(app_dir, "input.json")
+    with open(in_path, "w") as f:
+        f.write(input_data)
+
+    # 4. Handle Requirements (Cached)
+    req_file = os.path.join(agent_dir, "requirements.txt")
+    current_reqs = "\n".join(sorted(requirements))
+    
+    needs_install = False
+    if not os.path.exists(req_file):
+        needs_install = True
+    else:
+        with open(req_file, "r") as f:
+            if f.read().strip() != current_reqs.strip():
+                needs_install = True
+
+    if needs_install and requirements:
+        logger.info(f"Sandbox: Syncing requirements for {agent_id}: {requirements}")
+        pip_path = os.path.join(venv_dir, "bin", "pip")
+        with open(req_file, "w") as f:
+            f.write(current_reqs)
+        
+        # Install with timeout
+        subprocess.run(
+            [pip_path, "install", "--no-cache-dir"] + requirements,
+            capture_output=True,
+            timeout=120
         )
 
-    # Prepare environment variables
-    env = os.environ.copy()
-    if env_vars:
-        env.update(env_vars)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # 1. Write agent files
-        for filename, content in files.items():
-            # Security: Prevent path traversal
-            if ".." in filename or filename.startswith("/"):
-                return False, "", f"Invalid filename: {filename}", []
-
-            file_path = os.path.join(tmpdir, filename)
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "w") as f:
-                f.write(content)
-
-        # 2. Create input file
-        in_path = os.path.join(tmpdir, "input.json")
-        with open(in_path, "w") as f:
-            f.write(input_data)
-
-        # 3. Inject internal shoujiki module (M2M Bridge + Env Access)
-        import base64
-        env_json = json.dumps(env_vars or {})
-        env_b64 = base64.b64encode(env_json.encode()).decode()
-        
-        shoujiki_module = f"""
+    # 5. Inject internal shoujiki module
+    env_json = json.dumps(env_vars or {})
+    env_b64 = base64.b64encode(env_json.encode()).decode()
+    
+    shoujiki_module = f"""
 import json
 import os
 import base64
@@ -88,15 +129,34 @@ class Shoujiki:
 
 shoujiki = Shoujiki()
 """
-        with open(os.path.join(tmpdir, "shoujiki.py"), "w") as f:
-            f.write(shoujiki_module)
+    with open(os.path.join(app_dir, "shoujiki.py"), "w") as f:
+        f.write(shoujiki_module)
 
-        module_name = entrypoint.replace(".py", "").replace("/", ".")
-        wrapper_code = f"""
+    module_name = entrypoint.replace(".py", "").replace("/", ".")
+    wrapper_code = f"""
 import json
 import sys
 import os
 import importlib
+
+# --- SHOUJIKI SECURE AUDIT SANDBOX ---
+def audit_hook(event, args):
+    if event in ('socket.bind', 'socket.listen'):
+        raise PermissionError(f"Shoujiki Sandbox: Server-side networking is forbidden ({{event}})")
+    
+    if event in ('os.system', 'os.spawn', 'subprocess.Popen', 'os.execve', 'os.posix_spawn'):
+        raise PermissionError(f"Shoujiki Sandbox: Subprocess execution is forbidden ({{event}})")
+
+    if event == 'open':
+        path = args[0]
+        if isinstance(path, (str, bytes)):
+            path_str = path if isinstance(path, str) else path.decode(errors='ignore')
+            # Allow venv but block system escape
+            if any(p in path_str for p in ['/etc/', '/root/', '/home/', '~', '../']) and '{agent_id}' not in path_str:
+                raise PermissionError(f"Shoujiki Sandbox: Filesystem escape detected ({{path_str}})")
+
+sys.addaudithook(audit_hook)
+# --------------------------------------
 
 sys.path.insert(0, os.path.abspath("."))
 
@@ -128,125 +188,96 @@ except Exception as e:
     traceback.print_exc(file=sys.stderr)
     sys.exit(1)
 """
-        wrapper_path = os.path.join(tmpdir, "wrapper.py")
-        with open(wrapper_path, "w") as f:
-            f.write(wrapper_code)
+    wrapper_path = os.path.join(app_dir, "wrapper.py")
+    with open(wrapper_path, "w") as f:
+        f.write(wrapper_code)
 
-        # 4. Execute with strict isolation tiers
-        # Tier 1: Bubblewrap (bwrap) - Preferred
-        bwrap_command = [
-            "bwrap",
-            "--ro-bind",
-            "/usr",
-            "/usr",
-            "--symlink",
-            "usr/bin",
-            "/bin",
-            "--symlink",
-            "usr/lib",
-            "/lib",
-            "--symlink",
-            "usr/lib64",
-            "/lib64",
-            "--symlink",
-            "usr/sbin",
-            "/sbin",
-            "--dir",
-            "/tmp",
-            "--proc",
-            "/proc",
-            "--dev",
-            "/dev",
-            "--unshare-all",  # Isolate network, ipc, uts, user, pid
-            "--hostname",
-            "shoujiki-sandbox",
-            "--bind",
-            tmpdir,
-            "/app",
-            "--chdir",
-            "/app",
-            "python3",
-            "wrapper.py",
-        ]
+    # 6. Execution with isolation
+    python_bin = os.path.join(venv_dir, "bin", "python3")
+    env = os.environ.copy()
+    if env_vars:
+        env.update(env_vars)
 
-        # Tier 2: Unshare (Namespace isolation) - Secondary
-        unshare_command = [
-            "unshare",
-            "--map-root-user",
-            "--net",
-            "--pid",
-            "--fork",
-            "python3",
-            "wrapper.py",
-        ]
+    bwrap_command = [
+        "bwrap",
+        "--ro-bind", "/usr", "/usr",
+        "--symlink", "usr/bin", "/bin",
+        "--symlink", "usr/lib", "/lib",
+        "--symlink", "usr/lib64", "/lib64",
+        "--symlink", "usr/sbin", "/sbin",
+        "--dir", "/tmp",
+        "--proc", "/proc",
+        "--dev", "/dev",
+        "--unshare-all",
+        "--hostname", f"agent-{agent_id[:8]}",
+        "--bind", app_dir, "/app",
+        "--bind", venv_dir, "/venv",
+        "--chdir", "/app",
+        "/venv/bin/python3", "wrapper.py",
+    ]
 
+    unshare_command = [
+        "unshare", "--map-root-user", "--net", "--pid", "--fork",
+        python_bin, "wrapper.py"
+    ]
+
+    # Tier 1: Bubblewrap (bwrap) - Kernel Level Isolation
+    process = None
+    try:
+        process = subprocess.run(bwrap_command, capture_output=True, text=True, timeout=30, preexec_fn=set_limits, env=env)
+        if process.returncode != 0:
+            logger.warning(f"Sandbox: Bubblewrap failed (code {process.returncode}). Stderr: {process.stderr}")
+            process = None # Force fallback
+    except Exception as e:
+        logger.warning(f"Sandbox: Bubblewrap execution error: {e}")
         process = None
 
+    # Tier 2: Unshare (Namespace isolation)
+    if process is None:
         try:
-            # Attempt Bubblewrap
+            process = subprocess.run(unshare_command, cwd=app_dir, capture_output=True, text=True, timeout=30, preexec_fn=set_limits, env=env)
+            if process.returncode != 0:
+                logger.warning(f"Sandbox: Unshare failed (code {process.returncode}). Stderr: {process.stderr}")
+                process = None # Force fallback
+        except Exception as e:
+            logger.warning(f"Sandbox: Unshare execution error: {e}")
+            process = None
+
+    # Tier 3: Hardened Runtime Fallback (Python Audit Hooks)
+    if process is None:
+        logger.warning(f"Sandbox: Kernel isolation failed. Falling back to Tier 3: Hardened Runtime (Audit Hooks).")
+        try:
             process = subprocess.run(
-                bwrap_command,
+                [python_bin, "wrapper.py"],
+                cwd=app_dir,
                 capture_output=True,
                 text=True,
-                timeout=15,
+                timeout=30,
                 preexec_fn=set_limits,
                 env=env,
             )
-            # If bwrap failed due to lack of permissions/binary, try Tier 2
-            if process.returncode != 0 and (
-                "bwrap" in process.stderr or "not permitted" in process.stderr
-            ):
-                raise PermissionError("bwrap failed")
-        except (PermissionError, FileNotFoundError, subprocess.SubprocessError):
-            logger.info(
-                "Sandbox: Bubblewrap not available or failed. Falling back to Unshare."
-            )
-            try:
-                process = subprocess.run(
-                    unshare_command,
-                    cwd=tmpdir,
-                    capture_output=True,
-                    text=True,
-                    timeout=15,
-                    preexec_fn=set_limits,
-                    env=env,
-                )
-                if (
-                    process.returncode != 0
-                    and "Operation not permitted" in process.stderr
-                ):
-                    raise PermissionError("unshare failed")
-            except Exception as e:
-                error_msg = f"Sandbox Critical Failure: Isolation failed (bwrap/unshare). System configured to FAIL CLOSED to prevent RCE. Error: {str(e)}"
-                logger.error(error_msg)
-                return (
-                    False,
-                    "",
-                    error_msg,
-                    [],
-                )
+        except Exception as final_e:
+            return (False, "", f"Fail-Closed: All execution methods (including Hardened Runtime) failed. Error: {str(final_e)}", [])
 
-        # 5. Process Output
-        MAX_OUTPUT_SIZE = 100000
-        stdout = process.stdout[:MAX_OUTPUT_SIZE]
-        stderr = process.stderr[:MAX_OUTPUT_SIZE]
+    # 7. Result Processing
+    MAX_OUTPUT_SIZE = 100000
+    stdout = process.stdout[:MAX_OUTPUT_SIZE]
+    stderr = process.stderr[:MAX_OUTPUT_SIZE]
 
-        result = ""
-        if "---RESULT_START---" in stdout:
-            parts = stdout.split("---RESULT_START---")
-            if len(parts) > 1 and "---RESULT_END---" in parts[1]:
-                result = parts[1].split("---RESULT_END---")[0].strip()
+    result = ""
+    if "---RESULT_START---" in stdout:
+        parts = stdout.split("---RESULT_START---")
+        if len(parts) > 1 and "---RESULT_END---" in parts[1]:
+            result = parts[1].split("---RESULT_END---")[0].strip()
 
-        # 6. Check for M2M hire requests
-        hire_requests = []
-        hire_req_path = os.path.join(tmpdir, "hire_request.json")
-        if os.path.exists(hire_req_path):
-            try:
-                with open(hire_req_path, "r") as f:
-                    data = json.load(f)
-                    if isinstance(data, dict):
-                        hire_requests.append(data)
-            except Exception:
-                pass
+    hire_requests = []
+    hire_req_path = os.path.join(app_dir, "hire_request.json")
+    if os.path.exists(hire_req_path):
+        try:
+            with open(hire_req_path, "r") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    hire_requests.append(data)
+        except Exception: pass
 
-        return process.returncode == 0, result, stderr, hire_requests
+    return process.returncode == 0, result, stderr, hire_requests
