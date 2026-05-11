@@ -111,7 +111,7 @@ export default function DeploySpacePage() {
             <Card className="border-zinc-800 bg-[#09090b]">
               <CardHeader className="border-b border-zinc-900">
                 <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-widest flex items-center gap-2">
-                  <Bot size={16} className="text-blue-500" /> Manifest
+                  <Bot size={16} className="text-protocol-cyan" /> Manifest
                 </h3>
               </CardHeader>
               <CardContent className="p-8 space-y-8">

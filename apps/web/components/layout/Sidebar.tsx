@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import Image from 'next/image';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -41,16 +42,22 @@ export const Sidebar = () => {
         width: isCollapsed ? 84 : 280,
         transition: { type: "spring", stiffness: 300, damping: 30 }
       }}
-      className="relative z-50 h-screen sticky top-0 hidden md:flex flex-col bg-background border-r border-white/[0.05] px-4 py-8"
+      className="relative z-50 h-screen sticky top-0 hidden md:flex flex-col bg-background border-r border-surface-border px-4 py-8"
     >
       {/* Brand */}
       <div className="flex items-center gap-4 px-3 mb-12">
         <motion.div 
-          whileHover={{ rotate: 180 }}
-          transition={{ duration: 0.6, ease: "anticipate" }}
-          className="relative w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+          whileHover={{ scale: 1.05 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="relative w-10 h-10 rounded-xl bg-protocol-violet/10 flex items-center justify-center shrink-0 shadow-protocol-glow border border-protocol-violet/20 overflow-hidden"
         >
-          <Zap size={20} className="text-black fill-black" />
+          <Image 
+            src="/1_1-LOGO.png" 
+            alt="Shoujiki Logo" 
+            width={40} 
+            height={40} 
+            className="object-cover"
+          />
         </motion.div>
         <AnimatePresence mode="wait">
           {!isCollapsed && (
@@ -61,11 +68,8 @@ export const Sidebar = () => {
               transition={{ duration: 0.2 }}
               className="flex flex-col"
             >
-              <span className="text-lg font-black tracking-tighter text-white uppercase italic leading-none">
+              <span className="text-lg font-bold tracking-tight text-white leading-none">
                 Shoujiki
-              </span>
-              <span className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em] mt-1">
-                Autonomous_OS
               </span>
             </motion.div>
           )}
@@ -87,19 +91,19 @@ export const Sidebar = () => {
                 className={cn(
                   "group relative flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-300",
                   isActive 
-                    ? "bg-white/[0.06] text-white" 
-                    : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.03]"
+                    ? "bg-surface text-white border border-surface-border" 
+                    : "text-zinc-500 hover:text-zinc-200 hover:bg-surface/50 border border-transparent"
                 )}
               >
                 <div className={cn(
                   "relative z-10 flex items-center justify-center w-6 h-6",
-                  isActive && "text-cyber-cyan"
+                  isActive && "text-protocol-cyan"
                 )}>
                   <Icon size={18} />
                   {isActive && (
                     <motion.div 
                       layoutId="active-nav-glow"
-                      className="absolute inset-0 bg-cyber-cyan/20 blur-md rounded-full -z-10"
+                      className="absolute inset-0 bg-protocol-cyan-glow blur-md rounded-full -z-10"
                     />
                   )}
                 </div>
@@ -110,7 +114,7 @@ export const Sidebar = () => {
                       initial={{ opacity: 0, x: -5 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -5 }}
-                      className="text-[11px] font-black uppercase tracking-widest whitespace-nowrap z-10"
+                      className="text-[12px] font-medium tracking-wide whitespace-nowrap z-10"
                     >
                       {item.label}
                     </motion.span>
@@ -120,7 +124,7 @@ export const Sidebar = () => {
                 {isActive && (
                   <motion.div 
                     layoutId="active-nav-indicator"
-                    className="absolute inset-0 border border-white/10 bg-white/[0.02] rounded-xl -z-0"
+                    className="absolute inset-0 bg-surface rounded-xl -z-0"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
@@ -138,30 +142,30 @@ export const Sidebar = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.05] space-y-5"
+              className="p-5 rounded-2xl bg-surface border border-surface-border space-y-5"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[9px] font-black text-zinc-500 uppercase tracking-widest">
-                  <Sparkles size={12} className="text-cyber-cyan animate-pulse" />
-                  Operator_Stat
+                <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+                  <Activity size={12} className="text-protocol-cyan animate-pulse" />
+                  Network
                 </div>
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-protocol-cyan shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
               </div>
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1">
-                  <p className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">Nodes_Active</p>
-                  <p className="text-base font-mono font-black text-white italic tracking-tighter">{stats.active_agents}</p>
+                  <p className="text-[10px] font-medium text-zinc-600 tracking-tight">Active Nodes</p>
+                  <p className="text-lg font-mono font-medium text-white">{stats.active_agents}</p>
                 </div>
                 <div className="space-y-1 text-right">
-                  <p className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">Total_Tasks</p>
-                  <p className="text-base font-mono font-black text-cyber-cyan italic tracking-tighter">{stats.total_executions}</p>
+                  <p className="text-[10px] font-medium text-zinc-600 tracking-tight">Total Tasks</p>
+                  <p className="text-lg font-mono font-medium text-protocol-cyan">{stats.total_executions}</p>
                 </div>
               </div>
 
-              <div className="relative h-1 w-full bg-zinc-900/50 rounded-full overflow-hidden p-[1px] border border-white/5">
+              <div className="relative h-1 w-full bg-background rounded-full overflow-hidden p-[1px] border border-surface-border">
                 <motion.div 
-                  className="h-full bg-gradient-to-r from-cyber-cyan to-blue-500 shadow-[0_0_10px_rgba(0,243,255,0.3)] rounded-full"
+                  className="h-full bg-gradient-to-r from-protocol-violet to-protocol-cyan shadow-protocol-glow rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: '72%' }}
                   transition={{ duration: 1.5, ease: "circOut" }}
@@ -175,10 +179,10 @@ export const Sidebar = () => {
               className="flex flex-col items-center gap-6"
             >
               <div className="flex flex-col items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-cyber-cyan shadow-[0_0_8px_rgba(0,243,255,0.5)]" />
-                <div className="w-0.5 h-4 bg-gradient-to-b from-cyber-cyan/50 to-transparent rounded-full" />
+                <div className="w-1.5 h-1.5 rounded-full bg-protocol-cyan shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
+                <div className="w-0.5 h-4 bg-gradient-to-b from-protocol-cyan/50 to-transparent rounded-full" />
               </div>
-              <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-zinc-500">
+              <div className="w-10 h-10 rounded-xl bg-surface border border-surface-border flex items-center justify-center text-zinc-500">
                 <Activity size={16} />
               </div>
             </motion.div>
@@ -191,10 +195,9 @@ export const Sidebar = () => {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-24 w-7 h-7 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-500 hover:text-white hover:border-white/20 transition-all shadow-2xl z-50 group"
+        className="absolute -right-3 top-24 w-7 h-7 rounded-lg bg-surface border border-surface-border flex items-center justify-center text-zinc-500 hover:text-white hover:border-zinc-500 transition-all shadow-premium z-50 group"
       >
         <ChevronRight size={12} className={cn("transition-transform duration-500", isCollapsed ? "" : "rotate-180")} />
-        <div className="absolute inset-0 bg-cyber-cyan/10 opacity-0 group-hover:opacity-100 rounded-lg blur-md transition-opacity" />
       </motion.button>
     </motion.aside>
   );

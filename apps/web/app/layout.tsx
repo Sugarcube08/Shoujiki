@@ -20,6 +20,9 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Shoujiki | Autonomous Agent Fleet",
   description: "Secure, autonomous agent orchestrator for the SVM network.",
+  icons: {
+    icon: "/1_1-LOGO.png",
+  },
 };
 
 export default function RootLayout({

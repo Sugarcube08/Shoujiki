@@ -146,7 +146,7 @@ export default function LaborExchangePage() {
         <div className="xl:col-span-8 space-y-6">
            <div className="flex items-center justify-between px-2">
               <h2 className="text-sm font-bold text-zinc-200 uppercase tracking-widest flex items-center gap-2">
-                 <Briefcase size={16} className="text-blue-500" /> Open Task Orders
+                 <Briefcase size={16} className="text-protocol-cyan" /> Open Task Orders
               </h2>
               <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{orders.length} ACTIVE_LISTINGS</span>
            </div>
@@ -155,7 +155,7 @@ export default function LaborExchangePage() {
               {orders.length > 0 ? orders.map((order) => (
                  <Card key={order.id} className={cn(
                     "border-zinc-800/60 bg-[#0c0c0e] hover:border-zinc-700 transition-all",
-                    selectedOrderId === order.id && "border-blue-500/40 bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                    selectedOrderId === order.id && "border-protocol-cyan/40 bg-protocol-cyan/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
                  )}>
                     <CardContent className="p-6">
                        <div className="flex justify-between items-start mb-4">
@@ -163,7 +163,7 @@ export default function LaborExchangePage() {
                              <h3 className="text-lg font-bold text-zinc-100">{order.title}</h3>
                              <div className="flex items-center gap-3">
                                 <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-tighter">ID: {order.id}</span>
-                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-protocol-cyan uppercase tracking-widest flex items-center gap-1">
                                    <Clock size={10} /> 24h Remaining
                                 </span>
                              </div>
@@ -214,7 +214,7 @@ export default function LaborExchangePage() {
            <Card className="border-zinc-800 bg-[#09090b] shadow-2xl">
               <CardHeader className="border-b border-zinc-900">
                  <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-widest flex items-center gap-2">
-                    <Plus size={16} className="text-blue-500" /> Post Protocol Task
+                    <Plus size={16} className="text-protocol-cyan" /> Post Protocol Task
                  </h3>
               </CardHeader>
               <CardContent className="p-6 space-y-5">
@@ -239,7 +239,7 @@ export default function LaborExchangePage() {
                    value={newOrder.budget}
                    onChange={e => setNewOrder({...newOrder, budget: e.target.value})}
                  />
-                 <Button className="w-full h-12 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg" 
+                 <Button className="w-full h-12 rounded-xl font-bold bg-blue-600 hover:bg-protocol-cyan text-white shadow-lg" 
                     onClick={!isAuthenticated ? login : handleCreateOrder} 
                     isLoading={isCreating}
                     disabled={isCreating}
@@ -252,9 +252,9 @@ export default function LaborExchangePage() {
            {/* Bidding Interface (Sticky/Contextual) */}
            {selectedOrderId && (
               <div className="animate-in slide-in-from-right duration-500">
-                 <Card className="border-blue-500/20 bg-[#0c0c0e] shadow-2xl overflow-hidden">
-                    <CardHeader className="bg-blue-500/5 border-b border-blue-500/10 flex flex-row justify-between items-center py-4">
-                       <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Bid Manager</h3>
+                 <Card className="border-protocol-cyan/20 bg-[#0c0c0e] shadow-2xl overflow-hidden">
+                    <CardHeader className="bg-protocol-cyan/5 border-b border-protocol-cyan/10 flex flex-row justify-between items-center py-4">
+                       <h3 className="text-[10px] font-black text-protocol-cyan uppercase tracking-[0.2em]">Bid Manager</h3>
                        <button onClick={() => setSelectedOrderId(null)} className="text-zinc-600 hover:text-zinc-400">
                           <Plus size={14} className="rotate-45" />
                        </button>
@@ -296,7 +296,7 @@ export default function LaborExchangePage() {
                                 <div key={bid.id} className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/50 space-y-3">
                                    <div className="flex justify-between items-start">
                                       <div className="flex items-center gap-2">
-                                         <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400">
+                                         <div className="p-1.5 bg-protocol-cyan/10 rounded-lg text-protocol-cyan">
                                             <Cpu size={12} />
                                          </div>
                                          <span className="text-[11px] font-bold text-zinc-200">

@@ -127,22 +127,22 @@ export default function ProofExplorerPage() {
     <div className="space-y-12 animate-in fade-in duration-1000 pb-24 text-left">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 pb-10 border-b border-white/5">
         <div className="space-y-4">
-           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-black uppercase tracking-widest">
+           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-protocol-violet text-[9px] font-black uppercase tracking-widest">
             <ShieldCheck size={10} />
             Cryptographic_Audit_Mode
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Proof <span className="text-cyber-cyan">Explorer</span></h1>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Proof <span className="text-protocol-cyan">Explorer</span></h1>
           <p className="text-zinc-500 text-sm font-medium max-w-xl">
             Audit deterministic execution receipts from the TEE Enclaves. Verify ed25519 signatures client-side to ensure zero tampering.
           </p>
         </div>
         <div className="w-full lg:w-96 relative group">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-cyber-cyan transition-colors" />
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-protocol-cyan transition-colors" />
           <input 
              placeholder="Search Execution Hash or Task ID..." 
              value={search}
              onChange={e => setSearch(e.target.value)}
-             className="w-full bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl h-14 pl-12 pr-6 text-sm font-medium text-white focus:outline-none focus:border-cyber-cyan/30 focus:ring-1 focus:ring-cyber-cyan/20 transition-all shadow-glass-inner"
+             className="w-full bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl h-14 pl-12 pr-6 text-sm font-medium text-white focus:outline-none focus:border-protocol-cyan/30 focus:ring-1 focus:ring-protocol-cyan/20 transition-all shadow-glass-inner"
           />
         </div>
       </div>
@@ -163,7 +163,7 @@ export default function ProofExplorerPage() {
               {loading ? (
                 <tr>
                   <td colSpan={5} className="px-8 py-20 text-center">
-                    <Loader2 className="animate-spin text-cyber-cyan mx-auto" size={32} />
+                    <Loader2 className="animate-spin text-protocol-cyan mx-auto" size={32} />
                   </td>
                 </tr>
               ) : filteredTasks.length > 0 ? (
@@ -173,7 +173,7 @@ export default function ProofExplorerPage() {
                       {task.id.slice(0, 16)}...
                     </td>
                     <td className="px-8 py-5">
-                      <Link href={`/agent/${task.agent_id}`} className="text-xs font-mono font-bold text-cyber-cyan hover:text-white transition-colors">
+                      <Link href={`/agent/${task.agent_id}`} className="text-xs font-mono font-bold text-protocol-cyan hover:text-white transition-colors">
                         {task.agent_id.slice(0, 12)}...
                       </Link>
                     </td>
@@ -181,7 +181,7 @@ export default function ProofExplorerPage() {
                       <span className={cn(
                         "inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border",
                         task.status === 'completed' ? "bg-green-500/10 text-green-400 border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]" :
-                        task.status === 'running' ? "bg-cyber-cyan/10 text-cyber-cyan border-cyber-cyan/20 animate-pulse shadow-[0_0_10px_rgba(0,243,255,0.2)]" :
+                        task.status === 'running' ? "bg-protocol-cyan/10 text-protocol-cyan border-protocol-cyan/20 animate-pulse shadow-[0_0_10px_rgba(0,243,255,0.2)]" :
                         task.status === 'failed' ? "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.2)]" :
                         "bg-white/5 text-zinc-400 border-white/10"
                       )}>
@@ -194,7 +194,7 @@ export default function ProofExplorerPage() {
                     <td className="px-8 py-5">
                       {task.poae_hash ? (
                         <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded bg-purple-500/10 flex items-center justify-center border border-purple-500/20 text-purple-400">
+                          <div className="w-6 h-6 rounded bg-purple-500/10 flex items-center justify-center border border-purple-500/20 text-protocol-violet">
                             <FileCode2 size={12} />
                           </div>
                           <span className="text-[10px] font-mono text-zinc-500 truncate max-w-[200px]" title={task.poae_hash}>
@@ -211,7 +211,7 @@ export default function ProofExplorerPage() {
                           variant="outline" 
                           size="sm" 
                           onClick={() => startVerification(task)}
-                          className="h-8 text-[9px] border-purple-500/30 text-purple-400 hover:bg-purple-500 hover:text-black hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:border-purple-500"
+                          className="h-8 text-[9px] border-purple-500/30 text-protocol-violet hover:bg-purple-500 hover:text-black hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:border-purple-500"
                         >
                           Verify_Integrity
                         </Button>
@@ -252,7 +252,7 @@ export default function ProofExplorerPage() {
             >
               <div className="p-4 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <TerminalIcon size={16} className="text-cyber-cyan" />
+                  <TerminalIcon size={16} className="text-protocol-cyan" />
                   <span className="text-xs font-mono font-bold text-white uppercase tracking-widest">Cryptographic_Audit_Terminal</span>
                 </div>
                 {verifyStatus !== 'running' && (
@@ -271,7 +271,7 @@ export default function ProofExplorerPage() {
                       "mb-2",
                       log.includes('SUCCESS') ? "text-green-400 font-bold" :
                       log.includes('FAULT') || log.includes('mismatch') ? "text-red-400 font-bold" :
-                      log.includes('>>') ? "text-cyber-cyan" : "text-zinc-400"
+                      log.includes('>>') ? "text-protocol-cyan" : "text-zinc-400"
                     )}
                   >
                     {log}
@@ -281,7 +281,7 @@ export default function ProofExplorerPage() {
                   <motion.div 
                     animate={{ opacity: [1, 0, 1] }} 
                     transition={{ repeat: Infinity, duration: 1 }}
-                    className="w-2 h-4 bg-cyber-cyan inline-block align-middle ml-1"
+                    className="w-2 h-4 bg-protocol-cyan inline-block align-middle ml-1"
                   />
                 )}
               </div>

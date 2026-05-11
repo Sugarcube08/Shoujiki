@@ -42,7 +42,7 @@ export default function ExecutionsPage() {
       case 'completed': return <CheckCircle2 size={16} className="text-green-500" />;
       case 'settled': return <CheckCircle2 size={16} className="text-green-400" />;
       case 'failed': return <XCircle size={16} className="text-red-500" />;
-      case 'running': return <Loader2 size={16} className="text-blue-500 animate-spin" />;
+      case 'running': return <Loader2 size={16} className="text-protocol-cyan animate-spin" />;
       default: return <Clock size={16} className="text-zinc-500" />;
     }
   };
@@ -65,13 +65,13 @@ export default function ExecutionsPage() {
           </div>
 
           <div className="flex-1 w-full md:max-w-md relative group">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-cyber-cyan transition-colors" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-protocol-cyan transition-colors" />
             <input 
               type="text" 
               placeholder="Filter by Task ID or Agent ID..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl h-11 pl-12 pr-6 text-xs font-medium text-zinc-200 focus:outline-none focus:border-cyber-cyan/30 transition-all shadow-glass-inner"
+              className="w-full bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl h-11 pl-12 pr-6 text-xs font-medium text-zinc-200 focus:outline-none focus:border-protocol-cyan/30 transition-all shadow-glass-inner"
             />
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function ExecutionsPage() {
                            Output_Result
                          </h4>
                          {task.poae_hash && (
-                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-protocol-cyan/10 border border-protocol-cyan/20">
                              <ShieldCheck size={10} className="text-blue-400" />
                              <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Protocol_Verified</span>
                            </div>

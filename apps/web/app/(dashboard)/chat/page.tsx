@@ -221,14 +221,14 @@ export default function AgentChatPage() {
   if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] gap-6 animate-in fade-in duration-700">
-        <div className="w-20 h-20 bg-blue-500/10 rounded-3xl flex items-center justify-center text-blue-500 border border-blue-500/20 shadow-2xl">
+        <div className="w-20 h-20 bg-protocol-cyan/10 rounded-3xl flex items-center justify-center text-protocol-cyan border border-protocol-cyan/20 shadow-2xl">
           <Bot size={40} />
         </div>
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100">Establish Economic Identity</h1>
           <p className="text-zinc-500 text-sm max-w-xs mx-auto font-medium">Link your wallet to engage with autonomous agents on the Shoujiki Network.</p>
         </div>
-        <Button onClick={login} className="h-12 px-10 rounded-2xl bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-900/20 font-bold uppercase tracking-widest text-[10px]">
+        <Button onClick={login} className="h-12 px-10 rounded-2xl bg-protocol-violet hover:bg-protocol-cyan shadow-xl shadow-blue-900/20 font-bold uppercase tracking-widest text-[10px]">
           <Wallet size={16} className="mr-2" /> Connect Wallet
         </Button>
       </div>
@@ -249,12 +249,12 @@ export default function AgentChatPage() {
           <div className="p-6 border-b border-zinc-800/40 bg-zinc-900/10">
             <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-4">Protocol_Nodes</h3>
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors" size={14} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-protocol-cyan transition-colors" size={14} />
               <input 
                 placeholder="Search nodes..."
                 value={searchTerm}
                 onChange={(e) => setSearchSearchTerm(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-[11px] text-zinc-400 outline-none focus:border-blue-500/50 transition-all"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-[11px] text-zinc-400 outline-none focus:border-protocol-cyan/50 transition-all"
               />
             </div>
           </div>
@@ -267,7 +267,7 @@ export default function AgentChatPage() {
                 className={cn(
                   "p-4 rounded-2xl border cursor-pointer transition-all group",
                   selectedAgent?.id === agent.id 
-                    ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/20" 
+                    ? "bg-protocol-violet border-protocol-cyan text-white shadow-lg shadow-blue-900/20" 
                     : "bg-zinc-900/30 border-zinc-800/50 text-zinc-500 hover:bg-zinc-900 hover:border-zinc-700 hover:text-zinc-200"
                 )}
               >
@@ -305,7 +305,7 @@ export default function AgentChatPage() {
         {/* Economics Header */}
         <div className="flex flex-col lg:flex-row items-center justify-between p-4 bg-[#09090b] border border-zinc-800/50 rounded-[28px] shadow-2xl backdrop-blur-xl">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 border border-blue-500/20 shadow-inner">
+            <div className="w-12 h-12 bg-protocol-cyan/10 rounded-2xl flex items-center justify-center text-protocol-cyan border border-protocol-cyan/20 shadow-inner">
               <Bot size={24} />
             </div>
             <div className="text-left">
@@ -320,8 +320,8 @@ export default function AgentChatPage() {
           <div className="flex items-center gap-8 mt-4 lg:mt-0 px-8 py-3 bg-zinc-950/80 rounded-[22px] border border-zinc-800/50 shadow-inner">
             <div className="flex flex-col items-center">
               <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">Accrued_Cost</span>
-              <div className="flex items-center gap-2 text-cyber-cyan font-mono text-sm font-black italic">
-                <Coins size={14} className="text-cyber-cyan/50" />
+              <div className="flex items-center gap-2 text-protocol-cyan font-mono text-sm font-black italic">
+                <Coins size={14} className="text-protocol-cyan/50" />
                 {(session?.aggregated_cost ?? 0).toFixed(6)} SOL
               </div>
             </div>
@@ -351,8 +351,8 @@ export default function AgentChatPage() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full gap-8 py-20">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full animate-pulse" />
-                  <Sparkles size={64} strokeWidth={1} className="relative text-blue-500/40" />
+                  <div className="absolute inset-0 bg-protocol-cyan/20 blur-2xl rounded-full animate-pulse" />
+                  <Sparkles size={64} strokeWidth={1} className="relative text-protocol-cyan/40" />
                 </div>
                 <div className="text-center space-y-3">
                   <p className="text-[12px] font-black uppercase tracking-[0.5em] text-zinc-500">
@@ -375,7 +375,7 @@ export default function AgentChatPage() {
               >
                 <div className={cn(
                   "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border transition-transform duration-500 group-hover:scale-110",
-                  msg.role === 'user' ? "bg-zinc-950 border-zinc-800 text-zinc-500" : "bg-blue-600 border-blue-500 text-white shadow-2xl shadow-blue-900/30"
+                  msg.role === 'user' ? "bg-zinc-950 border-zinc-800 text-zinc-500" : "bg-protocol-violet border-protocol-cyan text-white shadow-2xl shadow-blue-900/30"
                 )}>
                   {msg.role === 'user' ? <User size={18} /> : <Bot size={18} />}
                 </div>
@@ -399,7 +399,7 @@ export default function AgentChatPage() {
                             <button
                               key={name}
                               onClick={() => downloadFile(name, content)}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 text-[11px] font-bold hover:bg-blue-500/20 transition-all"
+                              className="flex items-center gap-2 px-3 py-1.5 bg-protocol-cyan/10 border border-protocol-cyan/20 rounded-lg text-blue-400 text-[11px] font-bold hover:bg-protocol-cyan/20 transition-all"
                             >
                               <Save size={12} /> {name}
                             </button>
@@ -417,7 +417,7 @@ export default function AgentChatPage() {
                         <Terminal size={10} /> {Math.random().toString(16).slice(2, 10)}
                       </span>
                       <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                      <span className="text-cyber-cyan/60">+{msg.cost.toFixed(6)} SOL Accrued</span>
+                      <span className="text-protocol-cyan/60">+{msg.cost.toFixed(6)} SOL Accrued</span>
                     </div>
                   )}
                 </div>
@@ -425,14 +425,14 @@ export default function AgentChatPage() {
             ))}
             {loading && (
               <div className="flex items-center gap-6 animate-pulse">
-                <div className="w-10 h-10 bg-blue-600/10 rounded-2xl border border-blue-500/20 flex items-center justify-center text-blue-500 shadow-inner">
+                <div className="w-10 h-10 bg-protocol-violet/10 rounded-2xl border border-protocol-cyan/20 flex items-center justify-center text-protocol-cyan shadow-inner">
                   <RefreshCw size={18} className="animate-spin" />
                 </div>
                 <div className="px-8 py-5 bg-zinc-900/50 rounded-[28px] rounded-tl-none border border-zinc-800/40">
                   <div className="flex gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-protocol-cyan rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <div className="w-2 h-2 bg-protocol-cyan rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <div className="w-2 h-2 bg-protocol-cyan rounded-full animate-bounce" />
                   </div>
                 </div>
               </div>
@@ -453,13 +453,13 @@ export default function AgentChatPage() {
                   }
                 }}
                 placeholder={`Ask ${selectedAgent?.name || 'Protocol Node'}...`}
-                className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-[22px] py-5 pl-8 pr-24 text-[15px] text-zinc-100 outline-none focus:border-blue-500/40 transition-all resize-none shadow-2xl custom-scrollbar placeholder:text-zinc-700 font-medium"
+                className="w-full bg-[#0c0c0e] border border-zinc-800 rounded-[22px] py-5 pl-8 pr-24 text-[15px] text-zinc-100 outline-none focus:border-protocol-cyan/40 transition-all resize-none shadow-2xl custom-scrollbar placeholder:text-zinc-700 font-medium"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <Button 
                   onClick={handleSend} 
                   disabled={!input.trim() || loading}
-                  className="h-12 w-12 p-0 rounded-[18px] bg-blue-600 hover:bg-blue-500 shadow-2xl shadow-blue-900/40 transition-all active:scale-95"
+                  className="h-12 w-12 p-0 rounded-[18px] bg-protocol-violet hover:bg-protocol-cyan shadow-2xl shadow-blue-900/40 transition-all active:scale-95"
                 >
                   <Send size={22} />
                 </Button>
@@ -468,10 +468,10 @@ export default function AgentChatPage() {
             <div className="mt-4 flex items-center justify-between max-w-4xl mx-auto px-4">
               <div className="flex items-center gap-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">
                 <div className="flex items-center gap-2 transition-colors hover:text-zinc-400 cursor-default">
-                  <Terminal size={12} className="text-blue-500/50" /> Runtime: Python_v3.13
+                  <Terminal size={12} className="text-protocol-cyan/50" /> Runtime: Python
                 </div>
                 <div className="flex items-center gap-2 transition-colors hover:text-zinc-400 cursor-default">
-                  <RefreshCw size={12} className="text-blue-500/50" /> Sync: Web3_Escrow
+                  <RefreshCw size={12} className="text-protocol-cyan/50" /> Sync: Web3_Escrow
                 </div>
               </div>
               <div className="group flex items-center gap-2 text-zinc-700 cursor-help">

@@ -209,7 +209,7 @@ export default function AgentRunPage() {
                  </div>
                  <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50" />
+                       <div className="w-1.5 h-1.5 rounded-full bg-protocol-cyan/50" />
                        <span className="text-[9px] font-medium text-zinc-600 uppercase">Deterministic_Sandbox</span>
                     </div>
                  </div>
@@ -243,7 +243,7 @@ export default function AgentRunPage() {
                  </div>
                  <button 
                    onClick={() => router.push('/executions')}
-                   className="text-[9px] font-bold text-cyber-cyan uppercase hover:underline"
+                   className="text-[9px] font-bold text-protocol-cyan uppercase hover:underline"
                  >
                    View All_History
                  </button>
