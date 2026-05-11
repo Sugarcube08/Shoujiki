@@ -50,9 +50,9 @@ export default function MyAgentsPage() {
 
   if (!connected) return (
     <div className="flex flex-col items-center justify-center py-40 gap-10 animate-fade-in">
-      <div className="w-24 h-24 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] flex items-center justify-center text-zinc-700 relative shadow-2xl">
+      <div className="w-24 h-24 rounded-[2rem] bg-surface border border-surface-border flex items-center justify-center text-zinc-700 relative shadow-premium">
         <Shield size={44} strokeWidth={1} />
-        <div className="absolute inset-0 blur-3xl bg-cyber-cyan/5 -z-10" />
+        <div className="absolute inset-0 blur-3xl bg-protocol-cyan/5 -z-10" />
       </div>
       <div className="text-center space-y-3">
         <h2 className="text-2xl font-bold text-white tracking-tight">Operator Authentication Required</h2>
@@ -64,11 +64,11 @@ export default function MyAgentsPage() {
 
   return (
     <div className="space-y-16 animate-fade-in">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10 pb-12 border-b border-white/[0.06]">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10 pb-12 border-b border-surface-border">
         <div className="space-y-5">
-           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" />
-            Control_Panel_Active
+           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-surface border border-surface-border text-zinc-400 text-[10px] font-medium tracking-wider">
+            <div className="w-1.5 h-1.5 rounded-full bg-protocol-cyan shadow-[0_0_8px_rgba(6,182,212,0.4)] animate-pulse" />
+            Registry Online
           </div>
           <h1 className="text-5xl font-bold text-white tracking-tight">Agent <span className="text-zinc-500">Fleet</span></h1>
           <p className="text-zinc-500 text-base font-medium max-w-2xl leading-relaxed">
@@ -85,22 +85,22 @@ export default function MyAgentsPage() {
         {[
           { label: 'Live Nodes', value: agents.length, icon: Cpu, color: 'text-white' },
           { label: 'Total Earnings', value: agents.reduce((acc, a) => acc + (a.total_earnings || 0), 0).toFixed(4), unit: 'SOL', icon: Wallet, color: 'text-green-500' },
-          { label: 'Network Uptime', value: '99.9', unit: '%', icon: Activity, color: 'text-cyber-cyan' },
-          { label: 'Compute Load', value: '14.2', unit: 'PFLOPS', icon: Sparkles, color: 'text-purple-400' },
+          { label: 'Network Uptime', value: '99.9', unit: '%', icon: Activity, color: 'text-protocol-cyan' },
+          { label: 'Compute Load', value: '14.2', unit: 'PFLOPS', icon: Sparkles, color: 'text-protocol-violet' },
         ].map((stat, i) => (
           <motion.div 
             key={stat.label}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="p-8 rounded-[32px] bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all duration-300 group shadow-sm"
+            className="p-8 rounded-[32px] bg-surface border border-surface-border hover:border-zinc-500 transition-all duration-300 group shadow-sm"
           >
             <div className="flex items-center justify-between mb-6">
-              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center bg-white/[0.02] border border-white/[0.06] shadow-inner", stat.color)}>
+              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center bg-background border border-surface-border shadow-inner", stat.color)}>
                 <stat.icon size={22} strokeWidth={1.5} />
               </div>
             </div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">{stat.label}</p>
+            <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest mb-2">{stat.label}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-white tracking-tight font-mono">{stat.value}</span>
               {stat.unit && <span className="text-[11px] font-bold text-zinc-600 uppercase">{stat.unit}</span>}
@@ -123,8 +123,8 @@ export default function MyAgentsPage() {
           ))}
         </div>
       ) : (
-        <div className="py-40 text-center space-y-8 border border-dashed border-white/[0.08] rounded-[48px] bg-white/[0.01]">
-          <div className="w-24 h-24 bg-white/[0.02] border border-white/[0.06] rounded-[2.5rem] flex items-center justify-center text-zinc-700 mx-auto relative overflow-hidden group shadow-2xl">
+        <div className="py-40 text-center space-y-8 border border-dashed border-surface-border rounded-[48px] bg-surface/50">
+          <div className="w-24 h-24 bg-surface border border-surface-border rounded-[2.5rem] flex items-center justify-center text-zinc-700 mx-auto relative overflow-hidden group shadow-premium">
             <LayoutGrid size={44} strokeWidth={1} className="group-hover:rotate-90 transition-transform duration-700" />
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
@@ -146,34 +146,34 @@ export default function MyAgentsPage() {
           <Button 
             variant="outline" 
             onClick={() => router.push('/executions')}
-            className="h-10 border-white/[0.06] text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-white/[0.02]"
+            className="h-10 border-surface-border text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-surface"
           >
-            Open Execution_Log
+            Execution Log
           </Button>
         </div>
 
-        <div className="bg-[#0c0c0e] border border-white/[0.06] rounded-[32px] overflow-hidden shadow-2xl">
+        <div className="bg-surface border border-surface-border rounded-[32px] overflow-hidden shadow-premium">
            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-white/[0.02] border-b border-white/[0.06]">
-                   <th className="px-8 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Execution_ID</th>
-                   <th className="px-8 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Agent_Node</th>
-                   <th className="px-8 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Status</th>
-                   <th className="px-8 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Result_Preview</th>
-                   <th className="px-8 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Timestamp</th>
+                <tr className="bg-background/50 border-b border-surface-border">
+                   <th className="px-8 py-5 text-[10px] font-medium text-zinc-500 uppercase tracking-widest">Execution_ID</th>
+                   <th className="px-8 py-5 text-[10px] font-medium text-zinc-500 uppercase tracking-widest">Agent_Node</th>
+                   <th className="px-8 py-5 text-[10px] font-medium text-zinc-500 uppercase tracking-widest">Status</th>
+                   <th className="px-8 py-5 text-[10px] font-medium text-zinc-500 uppercase tracking-widest">Result_Preview</th>
+                   <th className="px-8 py-5 text-[10px] font-medium text-zinc-500 uppercase tracking-widest text-right">Timestamp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-surface-border">
                  {recentTasks.length > 0 ? recentTasks.map((task) => (
-                    <tr key={task.id} className="hover:bg-white/[0.01] transition-colors group cursor-pointer" onClick={() => router.push(`/agent/${task.agent_id}`)}>
-                       <td className="px-8 py-5 font-mono text-[11px] text-zinc-400 group-hover:text-cyber-cyan transition-colors">{task.id.slice(0, 12)}...</td>
+                    <tr key={task.id} className="hover:bg-surface-hover transition-colors group cursor-pointer" onClick={() => router.push(`/agent/${task.agent_id}`)}>
+                       <td className="px-8 py-5 font-mono text-[11px] text-zinc-400 group-hover:text-protocol-cyan transition-colors">{task.id.slice(0, 12)}...</td>
                        <td className="px-8 py-5 text-[11px] font-bold text-zinc-300">{task.agent_id}</td>
                        <td className="px-8 py-5">
                           <div className={cn(
-                             "inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider",
+                             "inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-medium tracking-wider",
                              task.status === 'completed' || task.status === 'settled' ? "bg-green-500/10 text-green-500 border border-green-500/20" :
                              task.status === 'failed' ? "bg-red-500/10 text-red-500 border border-red-500/20" : 
-                             "bg-zinc-500/10 text-zinc-500 border border-zinc-800"
+                             "bg-surface border border-surface-border text-zinc-400"
                           )}>
                              <div className={cn("w-1 h-1 rounded-full", 
                                task.status === 'completed' || task.status === 'settled' ? "bg-green-500" :
@@ -197,7 +197,7 @@ export default function MyAgentsPage() {
                     </tr>
                  )) : (
                     <tr>
-                       <td colSpan={5} className="px-8 py-20 text-center text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+                       <td colSpan={5} className="px-8 py-20 text-center text-[10px] font-medium text-zinc-600 uppercase tracking-widest">
                           No autonomous activity recorded in this session.
                        </td>
                     </tr>

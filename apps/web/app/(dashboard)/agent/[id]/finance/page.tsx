@@ -127,7 +127,7 @@ export default function AgentFinancePage() {
 
                   <Card className="bg-[#0a0a0c] border-zinc-800 p-6 relative overflow-hidden">
                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+                        <div className="p-2 bg-protocol-cyan/10 rounded-lg text-blue-400">
                            <Wallet size={20} />
                         </div>
                         <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Claimable Balance</span>
@@ -151,7 +151,7 @@ export default function AgentFinancePage() {
                   <div className="flex flex-col md:flex-row justify-between gap-10">
                      <div className="space-y-4 max-w-sm">
                         <h3 className="text-lg font-bold text-zinc-100 flex items-center gap-2">
-                           <CheckCircle2 size={18} className="text-blue-500" /> Direct Payout Model
+                           <CheckCircle2 size={18} className="text-protocol-cyan" /> Direct Payout Model
                         </h3>
                         <p className="text-xs text-zinc-500 leading-relaxed">
                            This agent uses the Direct Payout protocol. All compute fees paid by users are instantly credited to your internal ledger and can be withdrawn to your Solana wallet at any time.

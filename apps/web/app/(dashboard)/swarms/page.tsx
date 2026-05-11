@@ -104,8 +104,8 @@ export default function SwarmsPage() {
   if (loading && workflows.length === 0) return (
     <div className="flex flex-col items-center justify-center py-40 gap-4">
       <div className="relative">
-        <Loader2 className="animate-spin text-cyber-cyan" size={32} />
-        <div className="absolute inset-0 blur-md bg-cyber-cyan/20 animate-pulse" />
+        <Loader2 className="animate-spin text-protocol-cyan" size={32} />
+        <div className="absolute inset-0 blur-md bg-protocol-cyan/20 animate-pulse" />
       </div>
       <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Synthesizing_Graph_State...</span>
     </div>
@@ -119,7 +119,7 @@ export default function SwarmsPage() {
             <Layers size={10} />
             Architect_Mode_Active
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Protocol <span className="text-cyber-cyan">Architect</span></h1>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Protocol <span className="text-protocol-cyan">Architect</span></h1>
           <p className="text-zinc-500 text-sm font-medium max-w-xl">
             Design non-deterministic agent swarms with logic gates, conditional branching, and autonomous routing. Interconnect specialized neural nodes into a unified workflow.
           </p>
@@ -131,7 +131,7 @@ export default function SwarmsPage() {
           </div>
           <div>
             <p className="text-[10px] font-black text-zinc-600 uppercase">Active_Frontier</p>
-            <p className="text-xl font-mono font-black text-cyber-cyan tracking-tighter">{runs.filter(r => r.status === 'running').length}</p>
+            <p className="text-xl font-mono font-black text-protocol-cyan tracking-tighter">{runs.filter(r => r.status === 'running').length}</p>
           </div>
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function SwarmsPage() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="w-full relative"
       >
-        <div className="absolute -inset-1 bg-gradient-to-br from-cyber-cyan/10 to-cyber-blue/10 blur-xl -z-10 rounded-[32px]" />
+        <div className="absolute -inset-1 bg-gradient-to-br from-protocol-cyan/10 to-cyber-blue/10 blur-xl -z-10 rounded-[32px]" />
         <SwarmFlowBuilder 
           agents={agents} 
           onSave={handleCreate} 
@@ -155,7 +155,7 @@ export default function SwarmsPage() {
         <div className="xl:col-span-12 space-y-12">
            <div className="space-y-6">
               <h2 className="text-lg font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
-                 <Share2 size={18} className="text-cyber-cyan" /> Registered_Swarm_Protocols
+                 <Share2 size={18} className="text-protocol-cyan" /> Registered_Swarm_Protocols
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                  {workflows.map((wf, index) => (
@@ -165,13 +165,13 @@ export default function SwarmsPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                     >
-                      <Card className="border-white/5 bg-white/[0.02] hover:border-cyber-cyan/30 hover:bg-white/[0.04] transition-all duration-500 group overflow-hidden">
+                      <Card className="border-white/5 bg-white/[0.02] hover:border-protocol-cyan/30 hover:bg-white/[0.04] transition-all duration-500 group overflow-hidden">
                         <CardHeader className="flex flex-row justify-between items-start pb-4 border-b-0 bg-transparent pt-8 px-8">
                             <div className="space-y-1">
-                              <h4 className="text-lg font-black text-white tracking-tighter uppercase italic group-hover:text-cyber-cyan transition-colors">{wf.name}</h4>
+                              <h4 className="text-lg font-black text-white tracking-tighter uppercase italic group-hover:text-protocol-cyan transition-colors">{wf.name}</h4>
                               <p className="text-[9px] font-mono font-bold text-zinc-500 uppercase tracking-widest">{wf.id}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center text-zinc-600 group-hover:text-cyber-cyan transition-all">
+                            <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center text-zinc-600 group-hover:text-protocol-cyan transition-all">
                               <Layers size={16} />
                             </div>
                         </CardHeader>
@@ -187,11 +187,11 @@ export default function SwarmsPage() {
                               </div>
                               <div className="space-y-1">
                                 <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Type</p>
-                                <p className="text-lg font-mono font-bold text-cyber-cyan uppercase italic tracking-tighter">Multi</p>
+                                <p className="text-lg font-mono font-bold text-protocol-cyan uppercase italic tracking-tighter">Multi</p>
                               </div>
                             </div>
                             
-                            <Button variant="neon" size="sm" className="w-full h-11 text-[9px]" 
+                            <Button variant="protocol" size="sm" className="w-full h-11 text-[9px]" 
                                 onClick={() => handleRun(wf.id)}
                                 isLoading={runningId === wf.id}
                                 disabled={!!runningId}
@@ -223,7 +223,7 @@ export default function SwarmsPage() {
                           <div className={cn(
                              "w-1 h-12 rounded-full transition-all duration-1000",
                              run.status === 'completed' ? 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]' :
-                             run.status === 'running' ? 'bg-cyber-cyan animate-pulse shadow-[0_0_15px_rgba(0,243,255,0.4)]' : 'bg-zinc-800'
+                             run.status === 'running' ? 'bg-protocol-cyan animate-pulse shadow-[0_0_15px_rgba(0,243,255,0.4)]' : 'bg-zinc-800'
                           )} />
                           <div>
                              <div className="flex items-center gap-3 mb-1">
@@ -232,7 +232,7 @@ export default function SwarmsPage() {
                                </h5>
                                <span className={cn(
                                   "text-[8px] font-black uppercase px-2 py-0.5 rounded-lg border",
-                                  run.status === 'completed' ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-cyber-cyan border-cyber-cyan/20 bg-cyber-cyan/5'
+                                  run.status === 'completed' ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-protocol-cyan border-protocol-cyan/20 bg-protocol-cyan/5'
                                )}>{run.status}</span>
                              </div>
                              <div className="flex items-center gap-3 font-mono text-[9px] text-zinc-600 font-bold uppercase tracking-widest">
@@ -252,7 +252,7 @@ export default function SwarmsPage() {
                              <motion.div 
                                 className={cn(
                                   "h-full rounded-full transition-all duration-700",
-                                  run.status === 'completed' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-cyber-cyan shadow-[0_0_8px_rgba(0,243,255,0.5)]"
+                                  run.status === 'completed' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-protocol-cyan shadow-[0_0_8px_rgba(0,243,255,0.5)]"
                                 )}
                                 initial={{ width: 0 }}
                                 animate={{ width: run.status === 'completed' ? '100%' : '33%' }}

@@ -27,21 +27,21 @@ import { validateWorkflow } from '@/lib/api';
 
 // --- Custom Nodes ---
 
-const nodeStyle = "px-4 py-3 rounded-xl border bg-[#0c0c0e] shadow-2xl relative group";
+const nodeStyle = "px-4 py-3 rounded-xl border bg-surface shadow-premium relative group backdrop-blur-xl";
 
 const StartNode = ({ data }: NodeProps) => (
-  <div className={`${nodeStyle} border-green-500/50 bg-green-500/5 min-w-[120px] text-center`}>
-    <div className="flex items-center justify-center gap-2 text-green-400 font-black tracking-widest text-[10px] uppercase">
+  <div className={`${nodeStyle} border-surface-border min-w-[120px] text-center`}>
+    <div className="flex items-center justify-center gap-2 text-protocol-cyan font-medium tracking-widest text-[10px] uppercase">
       <Play size={12} /> Start
     </div>
-    <Handle type="source" position={Position.Right} className="w-3 h-3 bg-green-500 border-2 border-[#0c0c0e]" />
+    <Handle type="source" position={Position.Right} className="w-3 h-3 bg-protocol-cyan border-2 border-surface" />
   </div>
 );
 
 const EndNode = ({ data }: NodeProps) => (
-  <div className={`${nodeStyle} border-red-500/50 bg-red-500/5 min-w-[120px] text-center`}>
-    <Handle type="target" position={Position.Left} className="w-3 h-3 bg-red-500 border-2 border-[#0c0c0e]" />
-    <div className="flex items-center justify-center gap-2 text-red-400 font-black tracking-widest text-[10px] uppercase">
+  <div className={`${nodeStyle} border-surface-border min-w-[120px] text-center`}>
+    <Handle type="target" position={Position.Left} className="w-3 h-3 bg-zinc-500 border-2 border-surface" />
+    <div className="flex items-center justify-center gap-2 text-zinc-400 font-medium tracking-widest text-[10px] uppercase">
       <Square size={12} /> End
     </div>
   </div>
@@ -52,14 +52,14 @@ const AgentNode = ({ id, data }: NodeProps) => {
   const selectedAgent = agents.find(a => a.id === data.agent_id);
   
   return (
-    <div className={`${nodeStyle} border-blue-500/50 bg-blue-500/5 min-w-[240px]`}>
-      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-blue-500 border-2 border-[#0c0c0e]" />
+    <div className={`${nodeStyle} border-protocol-violet/30 hover:border-protocol-violet/50 transition-colors min-w-[240px]`}>
+      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-protocol-violet border-2 border-surface" />
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 text-blue-400 font-bold tracking-widest text-[10px] uppercase">
-          <Bot size={12} /> Executor Agent
+        <div className="flex items-center gap-2 text-protocol-violet font-bold tracking-widest text-[10px] uppercase">
+          <Bot size={12} /> Executor Node
         </div>
         {selectedAgent && (
-          <div className="px-2 py-0.5 rounded-full bg-blue-500/20 text-[8px] font-bold text-blue-300 uppercase">
+          <div className="px-2 py-0.5 rounded-full bg-protocol-violet/10 border border-protocol-violet/20 text-[8px] font-bold text-protocol-violet uppercase">
             v{selectedAgent.current_version}
           </div>
         )}
@@ -67,9 +67,9 @@ const AgentNode = ({ id, data }: NodeProps) => {
       
       <div className="space-y-3">
         <div className="flex flex-col gap-1">
-          <label className="text-[8px] text-zinc-500 uppercase font-bold">Select Intelligence</label>
+          <label className="text-[8px] text-zinc-500 uppercase font-medium">Select Intelligence</label>
           <select 
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[10px] font-medium text-zinc-200 outline-none focus:border-blue-500/50 transition-colors"
+            className="w-full bg-background border border-surface-border rounded-lg p-2 text-[10px] font-medium text-zinc-200 outline-none focus:border-protocol-violet/50 transition-colors"
             value={data.agent_id as string || ''}
             onChange={(e) => (data as any).onChange(id, 'agent_id', e.target.value)}
           >
@@ -80,16 +80,16 @@ const AgentNode = ({ id, data }: NodeProps) => {
         
         {selectedAgent && (
           <div className="space-y-2">
-            <div className="p-2 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
+            <div className="p-2 rounded-lg bg-background border border-surface-border">
               <p className="text-[9px] text-zinc-400 line-clamp-2 leading-relaxed">
                 {selectedAgent.description || 'No description provided.'}
               </p>
             </div>
             <div className="flex flex-col gap-1 pt-1">
-              <label className="text-[8px] text-zinc-600 uppercase font-black tracking-tighter">Sample Trace Output</label>
+              <label className="text-[8px] text-zinc-600 uppercase font-medium tracking-tighter">Sample Trace Output</label>
               <textarea 
                 placeholder="Agent response for dry-runs..." 
-                className="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[9px] font-medium text-zinc-400 outline-none focus:border-orange-500/30 resize-none transition-all"
+                className="w-full h-12 bg-background border border-surface-border rounded-lg p-2 text-[9px] font-mono text-zinc-400 outline-none focus:border-protocol-violet/30 resize-none transition-all"
                 value={data.sample_output as string || ''}
                 onChange={(e) => (data as any).onChange(id, 'sample_output', e.target.value)}
               />
@@ -97,32 +97,32 @@ const AgentNode = ({ id, data }: NodeProps) => {
           </div>
         )}
       </div>
-      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-blue-500 border-2 border-[#0c0c0e]" />
+      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-protocol-violet border-2 border-surface" />
     </div>
   );
 };
 
 const ConditionNode = ({ id, data }: NodeProps) => (
-  <div className={`${nodeStyle} border-purple-500/50 bg-purple-500/5 min-w-[220px]`}>
-    <Handle type="target" position={Position.Left} className="w-3 h-3 bg-purple-500 border-2 border-[#0c0c0e]" />
-    <div className="flex items-center gap-2 mb-3 text-purple-400 font-bold tracking-widest text-[10px] uppercase">
+  <div className={`${nodeStyle} border-protocol-cyan/30 hover:border-protocol-cyan/50 transition-colors min-w-[220px]`}>
+    <Handle type="target" position={Position.Left} className="w-3 h-3 bg-protocol-cyan border-2 border-surface" />
+    <div className="flex items-center gap-2 mb-3 text-protocol-cyan font-bold tracking-widest text-[10px] uppercase">
       <GitBranch size={12} /> Logic Gate (IF)
     </div>
     <div className="space-y-2">
       <div className="flex flex-col gap-1">
-        <label className="text-[8px] text-zinc-500 uppercase font-bold">Field to check</label>
+        <label className="text-[8px] text-zinc-500 uppercase font-medium">Field to check</label>
         <Input 
           placeholder="e.g. data.status" 
-          className="h-7 text-[10px] bg-zinc-950 border-zinc-800"
+          className="h-7 text-[10px] bg-background border-surface-border"
           value={data.field as string || ''}
           onChange={(e) => (data as any).onChange(id, 'field', e.target.value)}
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[8px] text-zinc-500 uppercase font-bold">Expected Value</label>
+        <label className="text-[8px] text-zinc-500 uppercase font-medium">Expected Value</label>
         <Input 
           placeholder="e.g. 200" 
-          className="h-7 text-[10px] bg-zinc-950 border-zinc-800"
+          className="h-7 text-[10px] bg-background border-surface-border"
           value={data.value as string || ''}
           onChange={(e) => (data as any).onChange(id, 'value', e.target.value)}
         />
@@ -136,18 +136,18 @@ const ConditionNode = ({ id, data }: NodeProps) => (
           type="source" 
           position={Position.Right} 
           id="true"
-          className="w-3 h-3 bg-green-500 border-2 border-[#0c0c0e]" 
+          className="w-3 h-3 bg-green-500 border-2 border-surface" 
         />
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-green-500 uppercase">True</span>
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[8px] font-medium text-green-500 uppercase">True</span>
       </div>
       <div className="relative">
         <Handle 
           type="source" 
           position={Position.Right} 
           id="false"
-          className="w-3 h-3 bg-red-500 border-2 border-[#0c0c0e]" 
+          className="w-3 h-3 bg-zinc-500 border-2 border-surface" 
         />
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-red-500 uppercase">False</span>
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[8px] font-medium text-zinc-500 uppercase">False</span>
       </div>
     </div>
   </div>
@@ -179,23 +179,23 @@ const IntentNode = ({ id, data }: NodeProps) => {
   };
 
   return (
-    <div className={`${nodeStyle} border-orange-500/50 bg-orange-500/5 min-w-[280px]`}>
-      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-orange-500 border-2 border-[#0c0c0e]" />
+    <div className={`${nodeStyle} border-surface-border hover:border-zinc-500 transition-colors min-w-[280px]`}>
+      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-zinc-400 border-2 border-surface" />
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 text-orange-400 font-bold tracking-widest text-[10px] uppercase">
-          <Zap size={12} className="fill-orange-400/20" /> Semantic Router
+        <div className="flex items-center gap-2 text-zinc-300 font-bold tracking-widest text-[10px] uppercase">
+          <Zap size={12} className="text-zinc-500" /> Semantic Router
         </div>
-        <button onClick={addPath} className="p-1 hover:bg-orange-500/20 rounded text-orange-500 transition-colors">
+        <button onClick={addPath} className="p-1 hover:bg-surface-hover rounded text-zinc-400 hover:text-white transition-colors">
           <Plus size={10} />
         </button>
       </div>
 
       <div className="space-y-4">
         {Object.entries(paths).map(([pathId, config]) => (
-          <div key={pathId} className="relative bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50 group/path">
+          <div key={pathId} className="relative bg-background p-2 rounded-lg border border-surface-border group/path">
             <div className="flex items-center justify-between mb-1.5">
               <input 
-                className="bg-transparent text-[9px] font-black uppercase text-zinc-300 outline-none w-2/3"
+                className="bg-transparent text-[9px] font-medium uppercase text-zinc-300 outline-none w-2/3"
                 value={config.label}
                 onChange={(e) => updatePath(pathId, 'label', e.target.value)}
               />
@@ -205,19 +205,19 @@ const IntentNode = ({ id, data }: NodeProps) => {
             </div>
             <textarea 
               placeholder="Keywords (anchors)..."
-              className="w-full bg-zinc-900 border border-zinc-800/50 rounded p-1.5 text-[9px] font-mono text-zinc-400 outline-none focus:border-orange-500/30 resize-none h-12"
+              className="w-full bg-surface border border-surface-border rounded p-1.5 text-[9px] font-mono text-zinc-400 outline-none focus:border-zinc-500 resize-none h-12"
               value={config.anchors}
               onChange={(e) => updatePath(pathId, 'anchors', e.target.value)}
             />
             
             {/* Semantic Handle */}
             <div className="absolute -right-7 top-1/2 -translate-y-1/2 flex items-center gap-2">
-              <span className="text-[7px] font-bold text-orange-500/60 uppercase pointer-events-none">Path</span>
+              <span className="text-[7px] font-medium text-zinc-500 uppercase pointer-events-none">Path</span>
               <Handle 
                 type="source" 
                 position={Position.Right} 
                 id={pathId}
-                className="w-3 h-3 bg-orange-500 border-2 border-[#0c0c0e]" 
+                className="w-3 h-3 bg-zinc-400 border-2 border-surface" 
               />
             </div>
           </div>
@@ -325,8 +325,8 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
   const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge({
     ...params,
     animated: true,
-    style: { stroke: '#3b82f6', strokeWidth: 2 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' }
+    style: { stroke: '#06b6d4', strokeWidth: 2 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: '#06b6d4' }
   }, eds)), [setEdges]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -404,33 +404,33 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
   };
 
   return (
-    <div className="flex w-full h-[600px] border border-zinc-800 rounded-[24px] overflow-hidden bg-[#050505]">
+    <div className="flex w-full h-[600px] border border-surface-border rounded-[24px] overflow-hidden bg-background">
       {/* Drag & Drop Palette */}
-      <div className="w-64 border-r border-zinc-800 bg-[#09090b] flex flex-col">
-        <div className="p-5 border-b border-zinc-800 bg-zinc-900/30">
+      <div className="w-64 border-r border-surface-border bg-surface flex flex-col">
+        <div className="p-5 border-b border-surface-border bg-background/50">
           <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-widest mb-1">Protocol Architect</h3>
           <p className="text-[10px] text-zinc-500 font-medium leading-relaxed">Drag nodes onto the board to build your non-deterministic swarm.</p>
         </div>
         
         <div className="flex-1 p-5 space-y-4">
           <div 
-            className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 flex items-center gap-3 cursor-grab hover:bg-blue-500/10 transition-colors"
+            className="p-4 rounded-xl border border-protocol-violet/20 bg-protocol-violet/5 flex items-center gap-3 cursor-grab hover:bg-protocol-violet/10 transition-colors"
             onDragStart={(e) => e.dataTransfer.setData('application/reactflow', 'AGENT')}
             draggable
           >
-            <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400"><Bot size={16} /></div>
+            <div className="w-8 h-8 rounded-lg bg-protocol-violet/10 flex items-center justify-center text-protocol-violet"><Bot size={16} /></div>
             <div>
-              <p className="text-xs font-bold text-zinc-200">Executor Agent</p>
-              <p className="text-[9px] text-zinc-500 font-medium">Specialized node worker</p>
+              <p className="text-xs font-bold text-zinc-200">Executor Node</p>
+              <p className="text-[9px] text-zinc-500 font-medium">Specialized worker</p>
             </div>
           </div>
 
           <div 
-            className="p-4 rounded-xl border border-purple-500/30 bg-purple-500/5 flex items-center gap-3 cursor-grab hover:bg-purple-500/10 transition-colors"
+            className="p-4 rounded-xl border border-protocol-cyan/20 bg-protocol-cyan/5 flex items-center gap-3 cursor-grab hover:bg-protocol-cyan/10 transition-colors"
             onDragStart={(e) => e.dataTransfer.setData('application/reactflow', 'CONDITION')}
             draggable
           >
-            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400"><GitBranch size={16} /></div>
+            <div className="w-8 h-8 rounded-lg bg-protocol-cyan/10 flex items-center justify-center text-protocol-cyan"><GitBranch size={16} /></div>
             <div>
               <p className="text-xs font-bold text-zinc-200">Logic Gate</p>
               <p className="text-[9px] text-zinc-500 font-medium">Conditional routing</p>
@@ -438,11 +438,11 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
           </div>
 
           <div 
-            className="p-4 rounded-xl border border-orange-500/30 bg-orange-500/5 flex items-center gap-3 cursor-grab hover:bg-orange-500/10 transition-colors"
+            className="p-4 rounded-xl border border-surface-border bg-background flex items-center gap-3 cursor-grab hover:border-zinc-500 transition-colors"
             onDragStart={(e) => e.dataTransfer.setData('application/reactflow', 'INTENT')}
             draggable
           >
-            <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400"><Zap size={16} className="fill-orange-400/20" /></div>
+            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center text-zinc-400"><Zap size={16} /></div>
             <div>
               <p className="text-xs font-bold text-zinc-200">Intent Router</p>
               <p className="text-[9px] text-zinc-500 font-medium">Semantic multi-path</p>
@@ -450,30 +450,30 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
           </div>
         </div>
 
-        <div className="p-5 border-t border-zinc-800 bg-zinc-900/30 space-y-4">
+        <div className="p-5 border-t border-surface-border bg-background/50 space-y-4">
           <Input 
             placeholder="Protocol Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-zinc-950 border-zinc-800 h-10 text-xs"
+            className="bg-background border-surface-border h-10 text-xs"
           />
 
-          <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-950/50">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-surface-border bg-surface">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-zinc-300">Visual Trace Mode</span>
+              <span className="text-[10px] font-medium text-zinc-300">Visual Trace Mode</span>
               <span className="text-[8px] text-zinc-500 font-medium italic">Local zero-cost traversal</span>
             </div>
             <input 
               type="checkbox" 
               checked={isSimulation}
               onChange={(e) => setIsSimulation(e.target.checked)}
-              className="w-4 h-4 rounded border-zinc-800 bg-zinc-900 text-blue-500 focus:ring-blue-500/20"
+              className="w-4 h-4 rounded border-surface-border bg-background text-protocol-violet focus:ring-protocol-violet/20"
             />
           </div>
 
           {validationErrors.length > 0 && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 space-y-1">
-              <p className="text-[8px] font-black text-red-400 uppercase tracking-tighter">Validation Failed</p>
+              <p className="text-[8px] font-medium text-red-400 uppercase tracking-tighter">Validation Failed</p>
               {validationErrors.map((err, i) => (
                 <p key={i} className="text-[9px] text-red-300/70 leading-tight">• {err}</p>
               ))}
@@ -481,7 +481,8 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
           )}
 
           <Button 
-            className="w-full h-10 rounded-xl font-bold gap-2 text-xs shadow-xl shadow-blue-900/10" 
+            variant="protocol"
+            className="w-full h-10 rounded-xl font-medium gap-2 text-xs" 
             onClick={handleSave} 
             isLoading={isLoading || isValidating}
             disabled={!name || nodes.length < 2 || validationErrors.length > 0}
@@ -503,10 +504,10 @@ function Flow({ agents, onSave, isLoading }: SwarmFlowBuilderProps) {
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
           fitView
-          className="bg-[#050505]"
+          className="bg-background"
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#27272a" />
-          <Controls className="bg-zinc-900 border-zinc-800 fill-zinc-400" />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1f1f1f" />
+          <Controls className="bg-surface border-surface-border fill-zinc-400" />
         </ReactFlow>
       </div>
     </div>

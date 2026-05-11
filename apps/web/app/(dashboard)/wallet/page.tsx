@@ -210,7 +210,7 @@ export default function WalletPage() {
                                 />
                             </div>
                             <Button 
-                                className="h-11 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all"
+                                className="h-11 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest bg-protocol-cyan hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all"
                                 onClick={handleDeposit}
                                 isLoading={actionLoading}
                             >
@@ -230,7 +230,7 @@ export default function WalletPage() {
                         <Shield size={12} /> Layer 2: Protected Ledger
                     </span>
                     <div className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
-                        <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Zero-Latency Active</span>
+                        <span className="text-[8px] font-black text-protocol-cyan uppercase tracking-widest">Zero-Latency Active</span>
                     </div>
                   </div>
                </CardHeader>

@@ -16,3 +16,5 @@ dist/
 !requirements.txt
 *.txt
 *.log
+
+.agents

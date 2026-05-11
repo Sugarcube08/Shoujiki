@@ -1,10 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0c;
-  --color-foreground: #fafafa;
-  --color-primary: #00f3ff;
-  --color-border: rgba(255, 255, 255, 0.08);
+  --color-background: #050505; /* Deep graphite */
+  --color-foreground: #ededed;
+  
+  --color-surface: #0a0a0a;
+  --color-surface-hover: #121212;
+  --color-surface-border: #1f1f1f;
+
+  --color-protocol-violet: #6b21a8;
+  --color-protocol-violet-glow: rgba(107, 33, 168, 0.4);
+  
+  --color-protocol-cyan: #06b6d4;
+  --color-protocol-cyan-glow: rgba(6, 182, 212, 0.4);
+  
+  --color-protocol-muted: rgba(255, 255, 255, 0.04);
 }
 
 @layer base {
@@ -14,32 +24,32 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-image: 
-      radial-gradient(circle at 50% -20%, rgba(0, 243, 255, 0.08) 0%, transparent 40%),
-      radial-gradient(circle at 0% 100%, rgba(45, 0, 255, 0.05) 0%, transparent 30%);
+      radial-gradient(circle at 50% -20%, rgba(107, 33, 168, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 0% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
     background-attachment: fixed;
     min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
     letter-spacing: -0.02em;
-    font-weight: 600;
+    font-weight: 500;
   }
 }
 
 @layer components {
   .glass-panel {
-    background-color: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    background-color: var(--color-protocol-muted);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--color-surface-border);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.8);
   }
   
   .glass-panel-hover {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .glass-panel-hover:hover {
-    background-color: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   .nav-link {
@@ -50,29 +60,32 @@
     border-radius: 0.5rem;
     font-size: 0.875rem;
     font-weight: 500;
-    transition: all 0.2s;
+    transition: all 0.3s;
     color: #a1a1aa; /* zinc-400 */
   }
   .nav-link:hover {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.05);
+    color: #ededed;
+    background-color: var(--color-protocol-muted);
   }
 
   .nav-link-active {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ededed;
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
 
 @layer utilities {
+  .text-glow-violet {
+    text-shadow: 0 0 20px var(--color-protocol-violet-glow);
+  }
   .text-glow-cyan {
-    text-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    text-shadow: 0 0 20px var(--color-protocol-cyan-glow);
   }
 
   .custom-scrollbar::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
@@ -80,36 +93,62 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-surface-border);
     border-radius: 10px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .scanline {
+    width: 100%;
+    height: 100px;
+    z-index: 10;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(0, 0, 0, 0) 100%);
+    opacity: 0.1;
+    position: absolute;
+    bottom: 100%;
+    animation: scanline 6s linear infinite;
+  }
+
+  @keyframes scanline {
+    0% { bottom: 100%; }
+    80% { bottom: 100%; }
+    100% { bottom: -100px; }
+  }
+
+  .flicker {
+    animation: flicker 0.1s infinite;
+  }
+
+  @keyframes flicker {
+    0% { opacity: 0.9; }
+    50% { opacity: 1; }
+    100% { opacity: 0.95; }
   }
 }
 
 /* React Flow Theming Overrides */
 .react-flow__node {
-  background-color: rgba(255, 255, 255, 0.02) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 0 !important;
+  background-color: var(--color-protocol-muted) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--color-surface-border) !important;
   border-radius: 0.75rem !important;
 }
 
 .react-flow__handle {
   width: 0.5rem !important;
   height: 0.5rem !important;
-  background-color: #52525b !important; /* zinc-600 */
-  border: 2px solid #0a0a0c !important;
+  background-color: var(--color-surface-border) !important;
+  border: 2px solid var(--color-surface) !important;
 }
 
 .react-flow__handle:hover {
-  background-color: #00f3ff !important;
+  background-color: var(--color-protocol-violet) !important;
 }
 
 .react-flow__edge-path {
-  stroke: #27272a !important; /* zinc-800 */
+  stroke: var(--color-surface-border) !important;
   stroke-width: 2px !important;
 }
-

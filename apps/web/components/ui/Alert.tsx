@@ -35,11 +35,11 @@ export const Alert = ({ type = 'info', title, message, onClose, className }: Ale
       glow: 'shadow-[0_0_15px_rgba(234,179,8,0.2)]'
     },
     info: {
-      bg: 'bg-cyber-cyan/10',
-      border: 'border-cyber-cyan/30',
-      text: 'text-cyber-cyan',
+      bg: 'bg-protocol-cyan/10',
+      border: 'border-protocol-cyan/30',
+      text: 'text-protocol-cyan',
       icon: Info,
-      glow: 'shadow-[0_0_15px_rgba(0,243,255,0.2)]'
+      glow: 'shadow-[0_0_15px_rgba(6,182,212,0.2)]'
     },
   };
 
@@ -49,18 +49,18 @@ export const Alert = ({ type = 'info', title, message, onClose, className }: Ale
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
+      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 20 }}
       className={cn(
-        "fixed bottom-8 right-8 z-50 flex items-center gap-4 px-6 py-4 rounded-2xl border backdrop-blur-xl transition-all",
-        config.bg, config.border, config.text, config.glow,
+        "fixed bottom-8 right-8 z-50 flex items-center gap-4 px-6 py-4 rounded-2xl border bg-surface/90 backdrop-blur-xl transition-all shadow-premium",
+        config.border, config.text, config.glow,
         className
       )}
     >
       <Icon size={18} className="shrink-0" />
       <div className="flex flex-col">
-        {title && <h5 className="text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">{title}</h5>}
-        <p className="text-[11px] font-bold opacity-90 uppercase tracking-widest">{message}</p>
+        {title && <h5 className="text-[10px] font-medium uppercase tracking-[0.2em] mb-0.5">{title}</h5>}
+        <p className="text-[11px] font-medium opacity-90 uppercase tracking-widest">{message}</p>
       </div>
       {onClose && (
         <button 

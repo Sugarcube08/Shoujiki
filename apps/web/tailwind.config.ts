@@ -13,29 +13,34 @@ const config: Config = {
         mono: ["var(--font-jetbrains-mono)", "monospace"],
       },
       colors: {
-        background: "#0a0a0c",
-        foreground: "#fafafa",
-        cyber: {
-          cyan: "#00f3ff",
-          blue: "#2d00ff",
-          magenta: "#ff00ff",
-          muted: {
-            cyan: "rgba(0, 243, 255, 0.15)",
-            white: "rgba(255, 255, 255, 0.05)",
-          }
+        background: "#050505", // Deep graphite
+        foreground: "#ededed",
+        surface: {
+          DEFAULT: "#0a0a0a",
+          hover: "#121212",
+          border: "#1f1f1f",
+        },
+        protocol: {
+          violet: "#6b21a8", // Primary violet accent
+          violetGlow: "rgba(107, 33, 168, 0.4)",
+          cyan: "#06b6d4",   // Secondary cyan accent
+          cyanGlow: "rgba(6, 182, 212, 0.4)",
+          muted: "rgba(255, 255, 255, 0.04)",
         },
       },
       backgroundImage: {
-        "gradient-main": "radial-gradient(circle at 50% -20%, rgba(0, 243, 255, 0.08) 0%, transparent 40%)",
-        "glass-gradient": "linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%)",
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "protocol-gradient": "linear-gradient(135deg, rgba(107,33,168,0.1) 0%, rgba(6,182,212,0.05) 100%)",
       },
       boxShadow: {
-        "soft-glow": "0 0 20px rgba(0, 243, 255, 0.1)",
-        "premium-card": "0 20px 40px -15px rgba(0, 0, 0, 0.5)",
+        "protocol-glow": "0 0 30px -10px rgba(107, 33, 168, 0.3)",
+        "protocol-cyan-glow": "0 0 30px -10px rgba(6, 182, 212, 0.3)",
+        "premium": "0 10px 40px -10px rgba(0, 0, 0, 0.8)",
       },
       animation: {
-        "fade-in": "fade-in 0.5s ease-out forwards",
-        "slide-up": "slide-up 0.5s ease-out forwards",
+        "fade-in": "fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "slide-up": "slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
       keyframes: {
         "fade-in": {
@@ -43,7 +48,7 @@ const config: Config = {
           "100%": { opacity: "1" },
         },
         "slide-up": {
-          "0%": { transform: "translateY(10px)", opacity: "0" },
+          "0%": { transform: "translateY(20px)", opacity: "0" },
           "100%": { transform: "translateY(0)", opacity: "1" },
         },
       },

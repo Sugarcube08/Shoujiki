@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { motion, HTMLMotionProps } from 'framer-motion';
 
 interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'neon';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'protocol';
   size?: 'sm' | 'md' | 'lg' | 'icon';
   isLoading?: boolean;
   children?: React.ReactNode;
@@ -19,20 +19,20 @@ export const Button = ({
   children,
   ...props
 }: ButtonProps) => {
-  const baseStyles = 'relative inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-cyan/30 disabled:pointer-events-none disabled:opacity-50 gap-2 overflow-hidden';
+  const baseStyles = 'relative inline-flex items-center justify-center rounded-xl font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-protocol-cyan/30 disabled:pointer-events-none disabled:opacity-50 gap-2 overflow-hidden';
   
   const variants = {
-    primary: 'bg-white text-black shadow-lg shadow-white/5',
-    secondary: 'bg-zinc-900 text-white border border-white/10 shadow-lg shadow-black/20',
-    outline: 'bg-transparent border border-white/10 text-zinc-400',
-    ghost: 'bg-transparent text-zinc-400',
-    neon: 'bg-cyber-cyan text-black shadow-[0_0_20px_rgba(0,243,255,0.3)]',
+    primary: 'bg-white text-black shadow-lg hover:bg-zinc-100',
+    secondary: 'bg-surface border border-surface-border text-white shadow-sm hover:border-zinc-500',
+    outline: 'bg-transparent border border-surface-border text-zinc-400 hover:text-white hover:border-zinc-500',
+    ghost: 'bg-transparent text-zinc-400 hover:text-white hover:bg-surface',
+    protocol: 'bg-protocol-violet text-white shadow-protocol-glow hover:bg-protocol-violet/80 border border-protocol-violet/50',
   };
 
   const sizes = {
-    sm: 'h-9 px-4 text-[10px] tracking-wider uppercase font-black',
-    md: 'h-11 px-6 text-xs tracking-wider uppercase font-black',
-    lg: 'h-14 px-10 text-sm tracking-widest uppercase font-black',
+    sm: 'h-9 px-4 text-xs',
+    md: 'h-11 px-6 text-sm',
+    lg: 'h-14 px-10 text-base',
     icon: 'h-11 w-11 p-0',
   };
 
@@ -48,15 +48,6 @@ export const Button = ({
       className={cn(baseStyles, variants[variant], sizes[size], className)}
       {...props}
     >
-      {/* Background Hover Glow for Primary/Neon */}
-      {(variant === 'primary' || variant === 'neon') && (
-        <motion.div 
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full"
-          animate={{ x: ['100%', '-100%'] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        />
-      )}
-      
       {/* Subtle Overlay on hover */}
       <motion.div 
         className="absolute inset-0 bg-current opacity-0 hover:opacity-[0.08] transition-opacity duration-300"

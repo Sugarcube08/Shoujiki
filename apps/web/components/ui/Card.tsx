@@ -15,9 +15,9 @@ export const Card = ({ children, className, isGlass = true, ...props }: CardProp
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
       className={cn(
-        "rounded-2xl border border-white/[0.06] transition-all duration-300",
-        isGlass && "bg-white/[0.02] backdrop-blur-xl shadow-premium-card hover:border-white/[0.12] hover:bg-white/[0.04]",
-        !isGlass && "bg-zinc-900/40",
+        "rounded-2xl border border-surface-border transition-all duration-300",
+        isGlass && "bg-surface/80 backdrop-blur-xl shadow-premium hover:border-zinc-500",
+        !isGlass && "bg-surface",
         className
       )}
       {...props}
@@ -28,7 +28,7 @@ export const Card = ({ children, className, isGlass = true, ...props }: CardProp
 };
 
 export const CardHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("px-8 py-5 border-b border-white/[0.05]", className)}>
+  <div className={cn("px-8 py-5 border-b border-surface-border", className)}>
     {children}
   </div>
 );
